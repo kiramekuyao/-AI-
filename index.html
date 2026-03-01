@@ -34,9 +34,7 @@
             border-color: #ffc107; background-color: rgba(255, 193, 7, 0.05); 
             transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.6); 
         }
-        .admin-card-root:hover { 
-            border-color: #ff4655; background-color: rgba(255, 70, 85, 0.05); 
-        }
+        .admin-card-root:hover { border-color: #ff4655; background-color: rgba(255, 70, 85, 0.05); }
 
         .id-badge {
             position: absolute; top: 0; left: 0; padding: 2px 8px; background: rgba(0, 255, 255, 0.1); color: cyan;
@@ -44,20 +42,14 @@
             border-right: 1px solid rgba(0, 255, 255, 0.2); border-bottom: 1px solid rgba(0, 255, 255, 0.2);
         }
         
-        /* 词汇卡片文字区：右边永远锁死，不随窗口伸缩 */
         .prompt-content {
-            flex: 1 1 0%; 
-            min-width: 0;
-            padding: 0 80px 0 15px; 
-            display: flex; align-items: center;
-            font-weight: bold; font-size: 1.05rem; 
-            overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+            flex: 1 1 0%; min-width: 0; padding: 0 80px 0 15px; display: flex; align-items: center;
+            font-weight: bold; font-size: 1.05rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
         }
         
         .fav-action {
-            width: 65px; min-width: 65px; max-width: 65px;
-            background-color: rgba(255, 255, 255, 0.02); border-left: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
+            width: 65px; min-width: 65px; max-width: 65px; background-color: rgba(255, 255, 255, 0.02); 
+            border-left: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
             flex-shrink: 0; flex-grow: 0;
         }
         .fav-action i { font-size: 26px; color: rgba(255, 255, 255, 0.15); pointer-events: none; }
@@ -75,9 +67,20 @@
         }
         
         .hide-scrollbar::-webkit-scrollbar { display: none; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; } 
-        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
-        ::-webkit-scrollbar-track { background: #0f1923; }
+        
+        /* 标签水平滚动条 */
+        .tabs-scroll {
+            display: flex; flex-wrap: nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; padding-bottom: 6px;
+        }
+        .tabs-scroll::-webkit-scrollbar { height: 8px !important; display: block !important; }
+        .tabs-scroll::-webkit-scrollbar-thumb { background: #ffc107 !important; border-radius: 4px !important; }
+        .tabs-scroll::-webkit-scrollbar-track { background: #0f1923 !important; border-radius: 4px !important; border: 1px solid rgba(255,255,255,0.05) !important; }
+
+        /* 内容列表滚动滑块限制高度 (~12个卡片高度) */
+        .fav-grid-scroll { max-height: 440px; overflow-y: auto; align-content: start; }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ffc107; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #0f1923; border-radius: 4px; border: 1px solid rgba(255,255,255,0.05); }
         
         .auth-input { width: 100%; background: #0f1923; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 10px 14px; color: white; outline: none; transition: border-color 0.2s; }
         .auth-input:focus { border-color: #3b82f6; }
@@ -139,7 +142,8 @@
                             <i class="fa-solid fa-cloud-arrow-down"></i> 系统初始化...
                         </div>
                     </div>
-                    <div class="flex items-center gap-6 mb-8">
+                    
+                    <div class="flex items-center gap-6 mb-8 border-b border-white/5 pb-2 overflow-x-auto tabs-scroll">
                         <h3 id="tabFavorites" class="cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all shrink-0">
                             <i class="fa-solid fa-box-archive"></i> 云端收藏夹
                         </h3>
@@ -151,6 +155,12 @@
                         </h3>
                         <h3 id="tabUserManager" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
                             <i class="fa-solid fa-users"></i> 用户管理 (ROOT)
+                        </h3>
+                        <h3 id="tabSponsorCodes" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-yellow-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
+                            <i class="fa-solid fa-key"></i> 赞助码中心 (ROOT)
+                        </h3>
+                        <h3 id="tabInternalCodes" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-purple-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
+                            <i class="fa-solid fa-ticket"></i> 内部口令 (ROOT)
                         </h3>
                     </div>
                     
@@ -200,7 +210,7 @@
                                     <input type="text" id="newSubAdminAccount" placeholder="输入新增管理员账户名..." class="flex-1 bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white text-sm focus:border-purple-400 transition-all">
                                     <button id="addSubAdminBtn" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-purple-500/30 transition-colors whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i> 授权管理</button>
                                 </div>
-                                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto" id="subAdminList"></div>
+                                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar" id="subAdminList"></div>
                             </div>
                             <div class="bg-[#161b22] p-4 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.05)]">
                                 <h4 class="font-tactical text-xl text-blue-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-user-check"></i> 免审发布者白名单 (Admin 可管理)</h4>
@@ -208,7 +218,7 @@
                                     <input type="text" id="newPublisherAccount" placeholder="输入免审核用户的账户名..." class="flex-1 bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white text-sm focus:border-blue-400 transition-all">
                                     <button id="addPublisherBtn" class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-blue-500/30 transition-colors whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i> 添加免审</button>
                                 </div>
-                                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto" id="publisherList"></div>
+                                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto custom-scrollbar" id="publisherList"></div>
                             </div>
                         </div>
 
@@ -258,6 +268,69 @@
                         <div id="userManagerPagination" class="flex justify-center items-center gap-4 mt-2"></div>
                     </div>
 
+                    <div id="sponsorCodesContainer" class="hidden flex-col gap-4">
+                        <div class="flex justify-between items-center bg-[#161b22] p-4 rounded-lg border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.05)] flex-wrap gap-4">
+                            <div class="flex flex-col gap-2 shrink-0 w-full lg:w-auto">
+                                <div class="flex items-center gap-4">
+                                    <span class="text-yellow-400 font-tactical text-lg tracking-wider"><i class="fa-solid fa-key mr-2"></i>赞助激活码管理</span>
+                                    <div class="flex items-center gap-3 border-l border-white/10 pl-6">
+                                        <label class="flex items-center gap-2 cursor-pointer font-tactical text-gray-300 hover:text-white transition-colors text-lg">
+                                            <input type="checkbox" id="toggleSponsorReqBtn" class="w-5 h-5 accent-yellow-500 cursor-pointer shadow-lg shadow-black">
+                                            开启激活码与口令强制验证
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <span class="text-gray-500 text-sm font-tactical">前端购卡链接:</span>
+                                    <input type="text" id="sponsorLinkInput" class="bg-[#0f1923] border border-white/10 px-3 py-1.5 rounded outline-none text-white text-xs w-64 focus:border-blue-400 transition-colors" placeholder="填入发卡网地址，如无则留空">
+                                    <button id="saveSponsorLinkBtn" class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-4 py-1.5 rounded font-bold text-xs hover:bg-blue-500/30 transition-colors shadow-sm whitespace-nowrap">保存配置</button>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col gap-2 shrink-0 items-end">
+                                <div class="flex gap-3 items-center">
+                                    <label class="flex items-center gap-1 text-gray-400 text-sm cursor-pointer mr-2 hover:text-white"><input type="checkbox" id="autoExportCodeCb" checked class="accent-yellow-500 w-4 h-4"> 生成并导出Excel</label>
+                                    <input type="number" id="genSponsorCount" placeholder="生成数量" class="w-24 bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white text-center font-bold focus:border-yellow-400" min="1" max="100" value="10">
+                                    <button id="generateCodesBtn" class="bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 px-5 py-2 rounded font-bold hover:bg-yellow-500/30 transition-colors shadow-sm whitespace-nowrap"><i class="fa-solid fa-bolt mr-1"></i>批量生成</button>
+                                </div>
+                                <button id="exportCodesBtn" class="bg-green-500/10 text-green-400 border border-green-500/30 px-5 py-2 rounded font-bold hover:bg-green-500/30 transition-colors shadow-sm whitespace-nowrap"><i class="fa-solid fa-file-excel mr-1"></i>导出当前列表</button>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-4 bg-[#161b22] p-3 rounded-lg border border-white/5">
+                            <span class="text-gray-500 font-tactical tracking-widest text-lg">FILTER:</span>
+                            <select id="sponsorFilter" class="bg-transparent border border-white/10 rounded px-4 py-2 text-white font-tactical outline-none cursor-pointer transition-colors text-lg focus:border-yellow-400">
+                                <option value="all" class="bg-white text-black font-bold">全 部 赞 助 码</option>
+                                <option value="unused" class="bg-white text-green-500 font-bold">未 使 用</option>
+                                <option value="used" class="bg-white text-red-500 font-bold">已 使 用</option>
+                            </select>
+                        </div>
+                        
+                        <div id="sponsorCodesGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+                        <div id="sponsorCodesPagination" class="flex justify-center items-center gap-4 mt-2"></div>
+                    </div>
+
+                    <div id="internalCodesContainer" class="hidden flex-col gap-4">
+                        <div class="flex justify-between items-center bg-[#161b22] p-4 rounded-lg border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.05)] flex-wrap gap-4">
+                            <div class="flex items-center gap-4 shrink-0">
+                                <span class="text-purple-400 font-tactical text-lg mr-2 tracking-wider"><i class="fa-solid fa-ticket mr-2"></i>内部账号注册口令 (一次性核销)</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <input type="text" id="singleInternalCode" placeholder="输入自定义独立口令..." class="w-48 bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white font-mono focus:border-purple-400 transition-colors">
+                                <button id="addInternalCodeBtn" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-5 py-2 rounded font-bold hover:bg-purple-500/30 transition-colors shadow-sm whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i>单个添加</button>
+                                <button id="importInternalBtn" class="bg-green-500/10 text-green-400 border border-green-500/30 px-5 py-2 rounded font-bold hover:bg-green-500/30 transition-colors shadow-sm ml-2 whitespace-nowrap" title="支持导入TXT或CSV，每行识别一个口令，自带去重"><i class="fa-solid fa-file-import mr-1"></i>批量导入 (Excel/TXT)</button>
+                            </div>
+                        </div>
+
+                        <div class="relative w-full max-w-md mb-2 mt-2">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="internalSearchInput" placeholder="检索未使用的口令..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-purple-400">
+                        </div>
+                        
+                        <div id="internalCodesGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+                        <div id="internalPagination" class="flex justify-center items-center gap-4 mt-2"></div>
+                    </div>
+
                 </div>
 
                 <div id="publicHallContainer" class="mt-12 border-t border-white/10 pt-8">
@@ -270,25 +343,34 @@
                         </button>
                     </div>
                     
-                    <div class="flex items-center gap-4 flex-wrap mb-6">
-                        <div class="relative w-full max-w-lg">
-                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                            <input type="text" id="sharedSearchInput" placeholder="检索全网共享词条或 ID (#001)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-blue-400">
-                        </div>
-                        <div class="flex items-center gap-2 bg-[#0f1923] border border-white/10 rounded px-4 py-2.5 shrink-0">
-                            <span class="text-gray-500 font-tactical tracking-widest text-base">SORT:</span>
-                            <select id="sortSelector" class="bg-transparent text-gray-300 text-base outline-none font-tactical cursor-pointer hover:text-white transition-colors">
-                                <option value="time" class="text-black font-bold">🕒 最新发布</option>
-                                <option value="favs" class="text-black font-bold">🔥 最热收藏</option>
-                                <option value="usage" class="text-black font-bold">📋 最多复制</option>
-                            </select>
-                        </div>
+                    <div id="publicHallLocked" class="hidden flex-col items-center justify-center py-16 bg-[#161b22] border border-white/10 border-dashed rounded-lg shadow-inner">
+                        <i class="fa-solid fa-lock text-blue-400 text-5xl mb-4 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]"></i>
+                        <h2 class="text-white font-tactical text-2xl tracking-widest mb-2">全网大厅已锁定</h2>
+                        <p class="text-gray-500 text-sm mb-6">请先登录账号，以查看和获取全网实时共享的词汇。</p>
+                        <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-colors">立即登录</button>
                     </div>
-                    
-                    <div id="cloudLoading" class="text-center text-gray-500 py-10 font-tactical text-xl hidden">
-                        <i class="fa-solid fa-satellite-dish fa-beat-fade mb-3 text-2xl text-blue-400"></i><br>正在链接全网数据库...
-                    </div>
-                    <div id="sharedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 transition-opacity duration-300">
+
+                    <div id="publicHallContent">
+                        <div class="flex items-center gap-4 flex-wrap mb-6">
+                            <div class="relative w-full max-w-lg">
+                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                                <input type="text" id="sharedSearchInput" placeholder="检索全网共享词条或 ID (#001)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-blue-400">
+                            </div>
+                            <div class="flex items-center gap-2 bg-[#0f1923] border border-white/10 rounded px-4 py-2.5 shrink-0">
+                                <span class="text-gray-500 font-tactical tracking-widest text-base">SORT:</span>
+                                <select id="sortSelector" class="bg-transparent text-gray-300 text-base outline-none font-tactical cursor-pointer hover:text-white transition-colors">
+                                    <option value="time" class="text-black font-bold">🕒 最新发布</option>
+                                    <option value="favs" class="text-black font-bold">🔥 最热收藏</option>
+                                    <option value="usage" class="text-black font-bold">📋 最多复制</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div id="cloudLoading" class="text-center text-gray-500 py-10 font-tactical text-xl hidden">
+                            <i class="fa-solid fa-satellite-dish fa-beat-fade mb-3 text-2xl text-blue-400"></i><br>正在链接全网数据库...
+                        </div>
+                        <div id="sharedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 transition-opacity duration-300 fav-grid-scroll custom-scrollbar">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -338,6 +420,21 @@
                         <label class="auth-label">找回码 (务必牢记)</label>
                         <input type="text" id="reg_recovery" class="auth-input" placeholder="用于找回账户与修改密码" autocomplete="off">
                     </div>
+                    
+                    <div id="regTypeWrapper" class="hidden flex-col gap-2 mt-1">
+                        <div class="flex gap-4 bg-[#0f1923] border border-white/10 rounded px-3 py-2">
+                            <label class="flex items-center gap-1.5 cursor-pointer text-gray-300 hover:text-white font-tactical text-sm transition-colors"><input type="radio" name="regType" value="sponsor" checked class="w-4 h-4 accent-[#ffc107] cursor-pointer"> 赞助激活码</label>
+                            <label class="flex items-center gap-1.5 cursor-pointer text-gray-300 hover:text-white font-tactical text-sm transition-colors"><input type="radio" name="regType" value="internal" class="w-4 h-4 accent-purple-500 cursor-pointer"> 内部专属口令</label>
+                        </div>
+                        <div id="sponsorInputArea" class="flex flex-col gap-1">
+                            <div class="flex justify-between items-end">
+                                <label id="reg_code_label" class="auth-label text-[#ffc107] !mb-0">赞助激活码 (必填)</label>
+                                <a href="#" id="getSponsorLinkBtn" target="_blank" class="text-xs text-[#3b82f6] hover:text-blue-400 font-bold hidden mb-0.5"><i class="fa-solid fa-link mr-1"></i>获取激活码</a>
+                            </div>
+                            <input type="text" id="reg_code_input" class="auth-input border-[#ffc107]/50 focus:border-[#ffc107] font-mono tracking-widest text-lg uppercase transition-colors" placeholder="请输入9位赞助码" autocomplete="off" maxlength="50">
+                        </div>
+                    </div>
+
                     <button id="submitReg" class="w-full mt-2 bg-green-600 hover:bg-green-500 text-white font-tactical text-xl tracking-widest py-2.5 rounded transition-colors shadow-[0_0_15px_rgba(34,197,94,0.3)]">注 册</button>
                 </div>
 
@@ -390,7 +487,6 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        // 数值格式化函数
         function formatCount(numStr) {
             let n = parseInt(numStr || 0, 10);
             if (isNaN(n)) n = 0;
@@ -410,16 +506,35 @@
 
         const ROOT_ADMIN = '893107072@qq.com'; 
         let subAdmins = [];
-        let publisherWhitelist = []; // 【新增】免审白名单数组
+        let publisherWhitelist = []; 
         
         let isRootAdmin = false;
         let isAdminLoggedIn = false;
-        let isWhitelistedPublisher = false; // 【新增】当前用户是否在免审名单内
+        let isWhitelistedPublisher = false; 
+        
+        let isSponsorCodeRequired = false;
+        let globalSponsorLink = ''; 
+        let allSponsorCodes = [];
+        let currentSponsorPage = 1;
+        let currentSponsorFilter = 'all';
+
+        let allInternalCodes = []; 
+        let currentInternalPage = 1;
+        let internalSearchQuery = '';
         
         let currentUser = null; 
 
         document.addEventListener('DOMContentLoaded', () => {
             
+            // 【新增】监听鼠标滚轮，实现标签栏水平滑动
+            document.addEventListener('wheel', (e) => {
+                const tabsScroll = e.target.closest('.tabs-scroll');
+                if (tabsScroll) {
+                    e.preventDefault();
+                    tabsScroll.scrollLeft += e.deltaY;
+                }
+            }, { passive: false });
+
             const toggleTerminalBtn = document.getElementById('toggleTerminalBtn');
             const terminalSidebar = document.getElementById('terminalSidebar');
             const toggleTerminalIcon = document.getElementById('toggleTerminalIcon');
@@ -454,7 +569,7 @@
             const ITEMS_PER_PAGE = 12;
             const ADMIN_ITEMS_PER_PAGE = 10;
             
-            let currentPageFav = 1, currentPageShared = 1, currentPageMyShares = 1, currentPageAdmin = 1;
+            let currentPageFav = 1, currentPageMyShares = 1, currentPageAdmin = 1;
             let favSearchQuery = '', mySharesSearchQuery = '', adminSearchQuery = '', sharedSearchQuery = '';
             let history = []; 
 
@@ -465,23 +580,21 @@
             let favoriteGroups = []; 
             let sharedItems = [];
 
-            // 开启 Supabase 实时广播订阅 (词汇大厅、管理员表、白名单表)
             if (supabaseClient) {
                 const channel = supabaseClient.channel('system_realtime');
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, () => fetchCloudData(false));
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'admin_whitelist' }, () => { if(currentUser) fetchPermissions(true); });
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'publisher_whitelist' }, () => { if(currentUser) fetchPermissions(true); });
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, () => { fetchGlobalSettings(); });
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'internal_codes' }, () => { if(isRootAdmin) fetchInternalCodes(); });
                 
-                // 监听大厅词汇变动
-                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, payload => {
-                    fetchCloudData(false);
+                channel.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'app_users' }, payload => {
+                    if (currentUser && payload.old && payload.old.id === currentUser.id) {
+                        alert("🚨 警告：您的账号已被超级管理员永久封禁并删除！\n\n系统即将强制退出...");
+                        localStorage.removeItem('yaoai_user');
+                        window.location.reload(); 
+                    }
                 });
-                // 监听子管理白名单变动
-                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'admin_whitelist' }, payload => {
-                    if (currentUser) fetchPermissions(true);
-                });
-                // 监听免审发布者白名单变动
-                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'publisher_whitelist' }, payload => {
-                    if (currentUser) fetchPermissions(true);
-                });
-
                 channel.subscribe();
             }
 
@@ -491,11 +604,9 @@
                 charCount.textContent = `剩余 ${remaining} 字`;
             });
 
-            // 【提取】动态拉取权限信息的函数 (供登录与实时更新使用)
             async function fetchPermissions(isRealtimeUpdate = false) {
                 if (!supabaseClient || !currentUser) return;
                 try {
-                    // 并发获取两条白名单数据
                     const [adminRes, pubRes] = await Promise.all([
                         supabaseClient.from('admin_whitelist').select('account_name'),
                         supabaseClient.from('publisher_whitelist').select('account_name')
@@ -508,45 +619,95 @@
                     isAdminLoggedIn = isRootAdmin || subAdmins.includes(currentUser.account_name);
                     isWhitelistedPublisher = publisherWhitelist.includes(currentUser.account_name);
 
-                    // 动态控制 UI 显示/隐藏
                     if (isAdminLoggedIn) {
                         document.getElementById('tabAdmin').classList.remove('hidden');
                         if (isRootAdmin) {
                             document.getElementById('subAdminManager').classList.remove('hidden');
                             document.getElementById('tabUserManager').classList.remove('hidden');
+                            document.getElementById('tabSponsorCodes').classList.remove('hidden');
+                            document.getElementById('tabInternalCodes').classList.remove('hidden'); 
                             fetchAllUsers();
                         } else {
                             document.getElementById('subAdminManager').classList.add('hidden');
                             document.getElementById('tabUserManager').classList.add('hidden');
+                            document.getElementById('tabSponsorCodes').classList.add('hidden');
+                            document.getElementById('tabInternalCodes').classList.add('hidden');
                         }
                     } else {
                         document.getElementById('tabAdmin').classList.add('hidden');
                         document.getElementById('tabUserManager').classList.add('hidden');
+                        document.getElementById('tabSponsorCodes').classList.add('hidden');
+                        document.getElementById('tabInternalCodes').classList.add('hidden');
                         
-                        // 如果权限被移除时，用户正处在管理员界面，强制踢回大厅
                         if (!document.getElementById('adminContainer').classList.contains('hidden')) {
                             document.getElementById('tabFavorites').click();
                             if(isRealtimeUpdate) alert("通知：您的管理员权限已被移除。");
                         }
                     }
 
-                    // 如果当前处在 Admin 面板，实时刷新面板里的两张白名单列表
                     if (!document.getElementById('adminContainer').classList.contains('hidden') && isAdminLoggedIn) {
                         renderSubAdmins();
                         renderPublishers();
                     }
-
-                } catch (e) {
-                    console.error("权限数据同步失败", e);
-                }
+                } catch (e) { console.error("权限数据同步失败", e); }
             }
+
+            async function fetchGlobalSettings() {
+                if(!supabaseClient) return;
+                try {
+                    const {data} = await supabaseClient.from('app_settings').select('*').eq('id', 1).single();
+                    if(data) {
+                        isSponsorCodeRequired = data.require_code;
+                        globalSponsorLink = data.sponsor_link || '';
+                        
+                        const reqWrapper = document.getElementById('regTypeWrapper');
+                        const toggleBtn = document.getElementById('toggleSponsorReqBtn');
+                        const linkBtn = document.getElementById('getSponsorLinkBtn');
+                        const linkInput = document.getElementById('sponsorLinkInput');
+                        
+                        if(isSponsorCodeRequired) reqWrapper.classList.remove('hidden');
+                        else reqWrapper.classList.add('hidden');
+                        
+                        if(globalSponsorLink) {
+                            linkBtn.href = globalSponsorLink;
+                            const isSponsorSelected = document.querySelector('input[name="regType"]:checked').value === 'sponsor';
+                            if(isSponsorSelected) linkBtn.classList.remove('hidden');
+                            else linkBtn.classList.add('hidden');
+                        } else {
+                            linkBtn.classList.add('hidden');
+                            linkBtn.href = "#";
+                        }
+                        
+                        if(toggleBtn) toggleBtn.checked = isSponsorCodeRequired;
+                        if(linkInput && linkInput.value === '') linkInput.value = globalSponsorLink;
+                    }
+                } catch(e) {}
+            }
+
+            const regRadios = document.querySelectorAll('input[name="regType"]');
+            regRadios.forEach(r => r.addEventListener('change', (e) => {
+                const label = document.getElementById('reg_code_label');
+                const link = document.getElementById('getSponsorLinkBtn');
+                const input = document.getElementById('reg_code_input');
+                
+                if(e.target.value === 'sponsor') {
+                    label.textContent = '赞助激活码 (必填)';
+                    label.className = 'auth-label text-[#ffc107] !mb-0';
+                    input.className = 'auth-input border-[#ffc107]/50 focus:border-[#ffc107] font-mono tracking-widest text-lg uppercase transition-colors';
+                    input.placeholder = '请输入9位赞助码';
+                    if(globalSponsorLink) link.classList.remove('hidden');
+                } else {
+                    label.textContent = '内部口令 (必填)';
+                    label.className = 'auth-label text-purple-400 !mb-0';
+                    input.className = 'auth-input border-purple-500/50 focus:border-purple-500 font-mono tracking-widest text-lg transition-colors';
+                    input.placeholder = '请输入内部授权口令';
+                    link.classList.add('hidden');
+                }
+            }));
 
             async function fetchCloudData(showLoading = true) {
                 if (!supabaseClient) return;
-                if (showLoading) {
-                    cloudLoading.classList.remove('hidden');
-                    sharedGrid.classList.add('hidden');
-                }
+                if (showLoading) { cloudLoading.classList.remove('hidden'); sharedGrid.classList.add('hidden'); }
                 try {
                     const { data, error } = await supabaseClient.from('shared_prompts').select('*').order('time', { ascending: false });
                     if (error) throw error;
@@ -560,9 +721,7 @@
                                     const cloudItem = sharedItems.find(i => i.id === item.id);
                                     if (cloudItem) {
                                         if (item.name !== cloudItem.name || item.text !== cloudItem.text) {
-                                            item.name = cloudItem.name;
-                                            item.text = cloudItem.text;
-                                            needsSave = true;
+                                            item.name = cloudItem.name; item.text = cloudItem.text; needsSave = true;
                                         }
                                     }
                                 }
@@ -570,21 +729,12 @@
                         });
                     }
                     if (needsSave && currentUser) {
-                        supabaseClient.from('user_favorites').upsert({
-                            user_id: currentUser.id,
-                            fav_data: JSON.stringify(favoriteGroups)
-                        }, { onConflict: 'user_id' }).then(({error}) => {
-                            if(error) console.error("静默云端同步失败", error);
-                        });
+                        supabaseClient.from('user_favorites').upsert({ user_id: currentUser.id, fav_data: JSON.stringify(favoriteGroups) }, { onConflict: 'user_id' }).then();
                     }
                 } catch (err) {
-                    console.error("数据拉取失败:", err);
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> <span class="text-red-400">大厅数据异常</span>`;
                 } finally {
-                    if (showLoading) {
-                        cloudLoading.classList.add('hidden');
-                        sharedGrid.classList.remove('hidden');
-                    }
+                    if (showLoading) { cloudLoading.classList.add('hidden'); sharedGrid.classList.remove('hidden'); }
                     renderSharedGrid();
                     if (!favWrapper.classList.contains('hidden')) renderGroups();
                     if(!mySharesContainer.classList.contains('hidden')) renderMyShares();
@@ -604,29 +754,21 @@
                             if (!g.items) g.items = []; 
                             g.items.forEach(item => { if (!item._uid) item._uid = 'uid_' + Math.random().toString(36).substr(2, 9); });
                         });
-                    } else {
-                        favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
-                    }
+                    } else { favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }]; }
                 } catch (err) {
                     favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
                 } finally {
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">云端已连接</span>`;
-                    renderGroups();
-                    updateSharedUI();
+                    renderGroups(); updateSharedUI();
                 }
             }
 
             async function initApp(user) {
+                fetchGlobalSettings(); 
                 currentUser = user;
                 await updateLoginUI(user);
-                if (user) {
-                    await fetchUserFavorites(user);
-                    await fetchCloudData();
-                } else {
-                    favoriteGroups = [];
-                    renderGroups();
-                    await fetchCloudData();
-                }
+                if (user) { await fetchUserFavorites(user); await fetchCloudData(); } 
+                else { favoriteGroups = []; renderGroups(); await fetchCloudData(); }
             }
 
             const localSession = localStorage.getItem('yaoai_user');
@@ -641,9 +783,7 @@
                     loginBtn.className = "cursor-default px-5 py-2.5 text-sm bg-green-600/20 border border-green-500/50 rounded text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.1)] shrink-0";
                     logoutBtn.classList.remove('hidden');
 
-                    // 获取权限并刷新界面 (替代旧的直接赋值逻辑)
                     await fetchPermissions(false);
-
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`;
                 } else {
                     document.getElementById('loginText').textContent = "登录 / 注册";
@@ -655,6 +795,8 @@
                     isAdminLoggedIn = false; isRootAdmin = false; isWhitelistedPublisher = false;
                     document.getElementById('tabAdmin').classList.add('hidden');
                     document.getElementById('tabUserManager').classList.add('hidden');
+                    document.getElementById('tabSponsorCodes').classList.add('hidden');
+                    document.getElementById('tabInternalCodes').classList.add('hidden');
                     if(!adminContainer.classList.contains('hidden')) document.getElementById('tabFavorites').click();
                 }
             }
@@ -662,48 +804,32 @@
             async function saveCloudAndSync(render = true) {
                 if (render) renderGroups();
                 updateSharedUI();
-                
                 if (!supabaseClient || !currentUser) return;
-                try {
-                    await supabaseClient.from('user_favorites').upsert({
-                        user_id: currentUser.id,
-                        fav_data: JSON.stringify(favoriteGroups)
-                    }, { onConflict: 'user_id' }).then();
-                } catch(e) {}
+                try { await supabaseClient.from('user_favorites').upsert({ user_id: currentUser.id, fav_data: JSON.stringify(favoriteGroups) }, { onConflict: 'user_id' }).then(); } catch(e) {}
             }
 
-            // === 认证系统逻辑 ===
             const authModal = document.getElementById('authModal');
             const authTabs = document.querySelectorAll('.auth-tab');
             const authPanels = document.querySelectorAll('.auth-panel');
             const authLoading = document.getElementById('authLoading');
             const authLoadingText = document.getElementById('authLoadingText');
 
-            function showAuthLoading(text) {
-                authLoadingText.textContent = text;
-                authLoading.classList.remove('hidden');
-                authLoading.classList.add('flex');
-            }
-            function hideAuthLoading() {
-                authLoading.classList.add('hidden');
-                authLoading.classList.remove('flex');
-            }
+            function showAuthLoading(text) { authLoadingText.textContent = text; authLoading.classList.remove('hidden'); authLoading.classList.add('flex'); }
+            function hideAuthLoading() { authLoading.classList.add('hidden'); authLoading.classList.remove('flex'); }
 
             authTabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     authTabs.forEach(t => { t.classList.remove('text-[#3b82f6]', 'border-[#3b82f6]'); t.classList.add('text-gray-500', 'border-transparent'); });
                     tab.classList.remove('text-gray-500', 'border-transparent'); tab.classList.add('text-[#3b82f6]', 'border-[#3b82f6]');
                     authPanels.forEach(p => p.classList.add('hidden')); document.getElementById(tab.dataset.target).classList.remove('hidden');
+                    if(tab.dataset.target === 'regPanel') fetchGlobalSettings();
                 });
             });
 
             document.getElementById('loginBtn').addEventListener('click', () => { if(!currentUser) authModal.classList.remove('hidden'); });
-            document.getElementById('logoutBtn').addEventListener('click', () => {
-                if(confirm("确定要登出当前账户吗？")) { localStorage.removeItem('yaoai_user'); initApp(null); }
-            });
+            document.getElementById('logoutBtn').addEventListener('click', () => { if(confirm("确定要登出当前账户吗？")) { localStorage.removeItem('yaoai_user'); initApp(null); } });
             document.getElementById('closeAuthBtn').addEventListener('click', () => authModal.classList.add('hidden'));
 
-            // 登入
             document.getElementById('submitLogin').addEventListener('click', async () => {
                 if(!supabaseClient) return alert("数据库尚未连接");
                 const acc = document.getElementById('login_account').value.trim(); const pwd = document.getElementById('login_pwd').value;
@@ -718,21 +844,47 @@
                 } catch(e) { alert(e.message); } finally { hideAuthLoading(); }
             });
 
-            // 注册
             document.getElementById('submitReg').addEventListener('click', async () => {
                 if(!supabaseClient) return alert("数据库尚未连接");
                 const acc = document.getElementById('reg_account').value.trim(); const nick = document.getElementById('reg_nickname').value.trim();
                 const pwd = document.getElementById('reg_pwd').value; const rec = document.getElementById('reg_recovery').value.trim();
+                const codeVal = document.getElementById('reg_code_input').value.trim();
+                const regType = document.querySelector('input[name="regType"]:checked').value; 
+
                 if(!acc || !nick || !pwd || !rec) return alert("所有字段均不能为空");
                 if(acc.length < 3 || nick.length < 2) return alert("账户名或昵称过短");
-                showAuthLoading('正在注册并分配权限...');
+                
+                showAuthLoading('正在验证注册信息...');
                 try {
+                    if (isSponsorCodeRequired) {
+                        if (regType === 'sponsor') {
+                            if (!codeVal || codeVal.length !== 9) throw new Error("由于管理员开启了验证，您必须输入有效的9位赞助激活码！");
+                            const { data: codeData, error: codeErr } = await supabaseClient.from('sponsor_codes').select('*').eq('code', codeVal.toUpperCase()).single();
+                            if (codeErr || !codeData) throw new Error("该赞助激活码不存在或无效。");
+                            if (codeData.is_used) throw new Error("该赞助激活码已被他人使用过了。");
+                        } else {
+                            if (!codeVal) throw new Error("由于管理员开启了验证，您必须输入内部授权口令！");
+                            const { data: codeData, error: codeErr } = await supabaseClient.from('internal_codes').select('*').eq('code', codeVal).single();
+                            if (codeErr || !codeData) throw new Error("该内部口令不存在或已失效。");
+                        }
+                    }
+
                     const { data: existAcc } = await supabaseClient.from('app_users').select('id').eq('account_name', acc);
                     if(existAcc && existAcc.length > 0) throw new Error("该账户名已被注册");
                     const { data: existNick } = await supabaseClient.from('app_users').select('id').eq('nickname', nick);
                     if(existNick && existNick.length > 0) throw new Error("该昵称已被使用");
+                    
                     const { data, error } = await supabaseClient.from('app_users').insert([{ account_name: acc, nickname: nick, pwd: pwd, recovery_code: rec }]).select().single();
                     if(error) throw error;
+
+                    if (isSponsorCodeRequired) {
+                        if (regType === 'sponsor') {
+                            await supabaseClient.from('sponsor_codes').update({ is_used: true, used_by: acc }).eq('code', codeVal.toUpperCase());
+                        } else {
+                            await supabaseClient.from('internal_codes').delete().eq('code', codeVal);
+                        }
+                    }
+
                     alert("注册成功！即将自动登入...");
                     const userObj = { id: data.id, account_name: data.account_name, nickname: data.nickname };
                     localStorage.setItem('yaoai_user', JSON.stringify(userObj));
@@ -740,7 +892,6 @@
                 } catch(e) { alert(e.message); } finally { hideAuthLoading(); }
             });
 
-            // 找回/修改密码
             document.getElementById('submitRec').addEventListener('click', async () => {
                 if(!supabaseClient) return alert("数据库尚未连接");
                 const acc = document.getElementById('rec_account').value.trim(); const key = document.getElementById('rec_key').value; const newPwd = document.getElementById('rec_new_pwd').value;
@@ -759,50 +910,69 @@
             });
 
             function resetTabs() {
-                document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
-                document.getElementById('tabMyShares').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
-                document.getElementById('tabAdmin').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
-                document.getElementById('tabUserManager').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
+                document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0";
+                document.getElementById('tabMyShares').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0";
+                document.getElementById('tabAdmin').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0";
+                document.getElementById('tabUserManager').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0";
+                document.getElementById('tabSponsorCodes').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-yellow-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0";
+                document.getElementById('tabInternalCodes').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-purple-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0";
                 
                 if(isAdminLoggedIn) document.getElementById('tabAdmin').classList.remove('hidden');
-                if(isRootAdmin) document.getElementById('tabUserManager').classList.remove('hidden');
+                if(isRootAdmin) {
+                    document.getElementById('tabUserManager').classList.remove('hidden');
+                    document.getElementById('tabSponsorCodes').classList.remove('hidden');
+                    document.getElementById('tabInternalCodes').classList.remove('hidden');
+                }
                 
                 favWrapper.classList.add('hidden'); 
                 mySharesContainer.classList.add('hidden'); 
                 adminContainer.classList.add('hidden'); 
                 document.getElementById('userManagerContainer').classList.add('hidden'); 
+                document.getElementById('sponsorCodesContainer').classList.add('hidden');
+                document.getElementById('internalCodesContainer').classList.add('hidden');
                 publicHallContainer.classList.add('hidden');
             }
 
             document.getElementById('tabFavorites').onclick = () => {
                 resetTabs();
-                document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all";
-                favWrapper.classList.remove('hidden'); 
-                publicHallContainer.classList.remove('hidden'); 
+                document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all shrink-0";
+                favWrapper.classList.remove('hidden'); publicHallContainer.classList.remove('hidden'); 
                 renderGroups();
             };
 
             document.getElementById('tabMyShares').onclick = () => {
                 resetTabs();
-                document.getElementById('tabMyShares').className = "cursor-pointer font-tactical text-2xl text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-blue-400 pb-1 transition-all";
+                document.getElementById('tabMyShares').className = "cursor-pointer font-tactical text-2xl text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-blue-400 pb-1 transition-all shrink-0";
                 mySharesContainer.classList.remove('hidden'); mySharesContainer.classList.add('flex');
                 renderMyShares();
             };
 
             document.getElementById('tabAdmin').onclick = () => {
                 if(!isAdminLoggedIn) return; resetTabs();
-                document.getElementById('tabAdmin').className = "cursor-pointer font-tactical text-2xl text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-red-400 pb-1 transition-all";
+                document.getElementById('tabAdmin').className = "cursor-pointer font-tactical text-2xl text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-red-400 pb-1 transition-all shrink-0";
                 adminContainer.classList.remove('hidden'); adminContainer.classList.add('flex');
-                renderAdminPanel();
-                renderSubAdmins();
-                renderPublishers();
+                renderAdminPanel(); renderSubAdmins(); renderPublishers();
             };
 
             document.getElementById('tabUserManager').onclick = () => {
                 if(!isRootAdmin) return; resetTabs();
-                document.getElementById('tabUserManager').className = "cursor-pointer font-tactical text-2xl text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-green-400 pb-1 transition-all";
+                document.getElementById('tabUserManager').className = "cursor-pointer font-tactical text-2xl text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-green-400 pb-1 transition-all shrink-0";
                 document.getElementById('userManagerContainer').classList.remove('hidden'); document.getElementById('userManagerContainer').classList.add('flex');
                 renderUserManager();
+            };
+
+            document.getElementById('tabSponsorCodes').onclick = () => {
+                if(!isRootAdmin) return; resetTabs();
+                document.getElementById('tabSponsorCodes').className = "cursor-pointer font-tactical text-2xl text-yellow-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-yellow-400 pb-1 transition-all shrink-0";
+                document.getElementById('sponsorCodesContainer').classList.remove('hidden'); document.getElementById('sponsorCodesContainer').classList.add('flex');
+                fetchGlobalSettings().then(() => fetchSponsorCodes());
+            };
+
+            document.getElementById('tabInternalCodes').onclick = () => {
+                if(!isRootAdmin) return; resetTabs();
+                document.getElementById('tabInternalCodes').className = "cursor-pointer font-tactical text-2xl text-purple-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-purple-400 pb-1 transition-all shrink-0";
+                document.getElementById('internalCodesContainer').classList.remove('hidden'); document.getElementById('internalCodesContainer').classList.add('flex');
+                fetchInternalCodes();
             };
 
             function renderGroups() {
@@ -815,13 +985,11 @@
                             <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-colors">立即登录</button>
                         </div>
                     `;
-                    document.getElementById('favActionButtons').classList.add('hidden');
-                    document.getElementById('favSearchContainer').classList.add('hidden');
+                    document.getElementById('favActionButtons').classList.add('hidden'); document.getElementById('favSearchContainer').classList.add('hidden');
                     return;
                 }
                 
-                document.getElementById('favActionButtons').classList.remove('hidden');
-                document.getElementById('favSearchContainer').classList.remove('hidden');
+                document.getElementById('favActionButtons').classList.remove('hidden'); document.getElementById('favSearchContainer').classList.remove('hidden');
                 
                 if (favoriteGroups.length === 0) return;
                 if (activeGroupIndex >= favoriteGroups.length) activeGroupIndex = 0;
@@ -830,7 +998,7 @@
                     const isActive = (i === activeGroupIndex);
                     const delBtn = (g.id !== 'group_default') ? '<button class="delete-group-btn text-gray-500 hover:text-red-500 pointer-events-auto"><i class="fa-solid fa-xmark"></i></button>' : '';
                     return `
-                        <div class="fav-tab ${isActive ? 'active-tab bg-[#161b22] border-t-2 border-t-[#ffc107] border-x border-white/10 text-[#ffc107] rounded-t-lg -mb-[1px] z-10' : 'border border-transparent border-b-white/10 text-gray-400 hover:bg-white/5'} 
+                        <div class="fav-tab shrink-0 ${isActive ? 'active-tab bg-[#161b22] border-t-2 border-t-[#ffc107] border-x border-white/10 text-[#ffc107] rounded-t-lg -mb-[1px] z-10' : 'border border-transparent border-b-white/10 text-gray-400 hover:bg-white/5'} 
                              flex items-center gap-2 px-4 py-2.5 cursor-pointer font-tactical text-lg relative" data-index="${i}">
                             <i class="fa-solid ${isActive ? 'fa-folder-open' : 'fa-folder'}"></i>
                             ${isActive ? `
@@ -848,20 +1016,12 @@
                     (i.id && i.id.includes(favSearchQuery.replace('#',''))) ||
                     (i.text||'').toLowerCase().includes(favSearchQuery)
                 );
-                const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE) || 1;
-                if (currentPageFav > totalPages) currentPageFav = totalPages;
-                const slice = items.slice((currentPageFav - 1) * ITEMS_PER_PAGE, currentPageFav * ITEMS_PER_PAGE);
 
                 groupsContainer.innerHTML = `
-                    <div class="flex items-end overflow-x-auto hide-scrollbar border-b border-white/10">${tabsHtml}</div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 min-h-[160px] p-5 drag-zone bg-[#161b22] border border-white/10 rounded-b-lg relative" data-group-id="${activeG.id}">
-                        ${slice.length === 0 ? `<div class="empty-placeholder">DRAG & DROP TO [ ${escapeHTML(activeG.name)} ]</div>` : ''}
-                        ${slice.map(item => createLocalItemHTML(item)).join('')}
-                        ${totalPages > 1 ? `<div class="col-span-full flex justify-center gap-4 mt-4 pagination-controls">
-                            <button class="prev-page-fav text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentPageFav === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>
-                            <span class="font-tactical tracking-widest text-sm text-gray-500 mt-1">PAGE ${currentPageFav}/${totalPages}</span>
-                            <button class="next-page-fav text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentPageFav === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
-                        </div>` : ''}
+                    <div class="flex items-end overflow-x-auto tabs-scroll border-b border-white/10 w-full">${tabsHtml}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 p-5 drag-zone bg-[#161b22] border border-white/10 rounded-b-lg relative fav-grid-scroll custom-scrollbar" data-group-id="${activeG.id}">
+                        ${items.length === 0 ? `<div class="empty-placeholder">DRAG & DROP TO [ ${escapeHTML(activeG.name)} ]</div>` : ''}
+                        ${items.map(item => createLocalItemHTML(item)).join('')}
                     </div>
                 `;
                 initDraggable();
@@ -908,22 +1068,14 @@
                 const zone = document.querySelector('.drag-zone');
                 if (!zone) return;
                 new Sortable(zone, {
-                    group: 'favorites', 
-                    animation: 150, 
-                    delay: 50, 
-                    delayOnTouchOnly: false, 
-                    ghostClass: 'sortable-ghost',
-                    filter: '.empty-placeholder, .pagination-controls, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
-                    onStart: (e) => { globalDraggedItem = e.item; },
-                    onEnd: () => { globalDraggedItem = null; },
+                    group: 'favorites', animation: 150, delay: 50, delayOnTouchOnly: false, ghostClass: 'sortable-ghost',
+                    filter: '.empty-placeholder, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
+                    onStart: (e) => { globalDraggedItem = e.item; }, onEnd: () => { globalDraggedItem = null; },
                     onAdd: function(evt) {
                         const itemEl = evt.item;
                         const itemData = { _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: itemEl.dataset.id || '', name: itemEl.dataset.name, text: itemEl.dataset.text };
                         const targetG = favoriteGroups[activeGroupIndex];
-                        const isDuplicate = targetG.items.some(i => 
-                            (itemData.id && i.id === itemData.id) || 
-                            (!itemData.id && i.text === itemData.text)
-                        );
+                        const isDuplicate = targetG.items.some(i => (itemData.id && i.id === itemData.id) || (!itemData.id && i.text === itemData.text));
                         setTimeout(() => {
                             itemEl.remove(); 
                             if (!isDuplicate) { 
@@ -943,17 +1095,26 @@
                     onUpdate: () => {
                         const domItems = Array.from(zone.querySelectorAll('.prompt-item:not(.sortable-ghost)'));
                         const newData = domItems.map(el => ({ _uid: el.dataset.uid, id: el.dataset.id, name: el.dataset.name, text: el.dataset.text }));
-                        const start = (currentPageFav - 1) * ITEMS_PER_PAGE;
-                        favoriteGroups[activeGroupIndex].items.splice(start, newData.length, ...newData);
+                        favoriteGroups[activeGroupIndex].items = newData;
                         saveCloudAndSync(false);
                     }
                 });
             }
 
             function renderSharedGrid() {
+                // 【新增核心】如果未登录，全网大厅立刻上锁
+                if (!currentUser) {
+                    document.getElementById('publicHallLocked').classList.remove('hidden');
+                    document.getElementById('publicHallLocked').classList.add('flex');
+                    document.getElementById('publicHallContent').classList.add('hidden');
+                    return;
+                }
+                document.getElementById('publicHallLocked').classList.add('hidden');
+                document.getElementById('publicHallLocked').classList.remove('flex');
+                document.getElementById('publicHallContent').classList.remove('hidden');
+
                 const sortBy = document.getElementById('sortSelector')?.value || 'time';
                 let items = [...sharedItems].filter(i => (i.name||'').toLowerCase().includes(sharedSearchQuery) || (i.id && i.id.includes(sharedSearchQuery.replace('#',''))));
-                
                 items = items.filter(i => i.is_approved !== false); 
                 
                 items.sort((a,b) => {
@@ -964,11 +1125,8 @@
                     return parseInt(b.time||0) - parseInt(a.time||0);
                 });
                 
-                const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE) || 1;
-                if (currentPageShared > totalPages) currentPageShared = totalPages;
-                const slice = items.slice((currentPageShared - 1) * ITEMS_PER_PAGE, currentPageShared * ITEMS_PER_PAGE);
-                
-                sharedGrid.innerHTML = slice.map(i => `
+                // 【重构核心】全网大厅取消分页，全部平铺，超过12个自动出滚动条
+                sharedGrid.innerHTML = items.map(i => `
                     <div class="prompt-item group relative" data-id="${i.id}" data-name="${escapeHTML(i.name)}" data-text="${escapeHTML(i.text)}" data-favs="${i.favs}">
                         ${i.is_pinned ? `<div class="absolute top-1 right-2 text-yellow-400 text-xs z-0" title="全网置顶"><i class="fa-solid fa-thumbtack"></i></div>` : ''}
                         <div class="id-badge flex items-center">
@@ -984,25 +1142,11 @@
                     </div>
                 `).join('');
                 
-                if (totalPages > 1) {
-                    sharedGrid.insertAdjacentHTML('beforeend', `
-                        <div class="col-span-full flex justify-center items-center gap-4 mt-2">
-                            <button class="prev-page-shared px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-30 transition-colors hover:text-white" ${currentPageShared === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>
-                            <span class="font-tactical text-gray-500 tracking-widest text-sm">PAGE ${currentPageShared} / ${totalPages}</span>
-                            <button class="next-page-shared px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-30 transition-colors hover:text-white" ${currentPageShared === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
-                        </div>
-                    `);
-                }
-                
                 if (typeof Sortable !== 'undefined') {
                     new Sortable(sharedGrid, { 
-                        group: { name:'favorites', pull:'clone', put:false }, 
-                        sort:false, 
-                        delay: 50,
-                        delayOnTouchOnly: false,
-                        filter: '.prev-page-shared, .next-page-shared, .copy-shared-btn',
-                        onStart:(e) => { globalDraggedItem = e.item; }, 
-                        onEnd:() => { globalDraggedItem = null; } 
+                        group: { name:'favorites', pull:'clone', put:false }, sort:false, delay: 50, delayOnTouchOnly: false,
+                        filter: '.copy-shared-btn',
+                        onStart:(e) => { globalDraggedItem = e.item; }, onEnd:() => { globalDraggedItem = null; } 
                     });
                 }
                 updateSharedUI();
@@ -1070,20 +1214,14 @@
                 let items = [...sharedItems];
 
                 const statusFilter = document.getElementById('adminStatusSelector')?.value || 'pending';
-                if (statusFilter === 'pending') {
-                    items = items.filter(i => i.is_approved === false);
-                } else if (statusFilter === 'approved') {
-                    items = items.filter(i => i.is_approved !== false);
-                }
+                if (statusFilter === 'pending') items = items.filter(i => i.is_approved === false);
+                else if (statusFilter === 'approved') items = items.filter(i => i.is_approved !== false);
 
                 if (adminSearchQuery) items = items.filter(i => (i.name||'').toLowerCase().includes(adminSearchQuery) || (i.id && i.id.includes(adminSearchQuery.replace('#',''))) || (i.text||'').toLowerCase().includes(adminSearchQuery));
 
                 const sortBy = document.getElementById('adminSortSelector')?.value || 'time';
                 items.sort((a,b) => {
-                    if (sortBy === 'pinned') {
-                        if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
-                        return parseInt(b.time||0) - parseInt(a.time||0);
-                    }
+                    if (sortBy === 'pinned') { if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1; return parseInt(b.time||0) - parseInt(a.time||0); }
                     if(sortBy === 'favs') return parseInt(b.favs||0) - parseInt(a.favs||0);
                     if(sortBy === 'usage') return parseInt(b.usage||0) - parseInt(a.usage||0);
                     return parseInt(b.time||0) - parseInt(a.time||0);
@@ -1129,9 +1267,7 @@
                     const { data, error } = await supabaseClient.from('app_users').select('*').order('id', { ascending: false });
                     if (!error) {
                         allUsersList = data || [];
-                        if (!document.getElementById('userManagerContainer').classList.contains('hidden')) {
-                            renderUserManager();
-                        }
+                        if (!document.getElementById('userManagerContainer').classList.contains('hidden')) renderUserManager();
                     }
                 } catch (err) { console.error("获取用户列表失败", err); }
             }
@@ -1139,9 +1275,8 @@
             function renderUserManager() {
                 if (!isRootAdmin) return;
                 let items = [...allUsersList];
-                if (userSearchQuery) {
-                    items = items.filter(u => (u.account_name||'').toLowerCase().includes(userSearchQuery) || (u.nickname||'').toLowerCase().includes(userSearchQuery));
-                }
+                if (userSearchQuery) items = items.filter(u => (u.account_name||'').toLowerCase().includes(userSearchQuery) || (u.nickname||'').toLowerCase().includes(userSearchQuery));
+                
                 const totalPages = Math.ceil(items.length / ADMIN_ITEMS_PER_PAGE) || 1;
                 if (currentPageUsers > totalPages) currentPageUsers = totalPages;
                 const slice = items.slice((currentPageUsers - 1) * ADMIN_ITEMS_PER_PAGE, currentPageUsers * ADMIN_ITEMS_PER_PAGE);
@@ -1166,6 +1301,80 @@
                 } else { document.getElementById('userManagerPagination').innerHTML = ''; }
             }
 
+            async function fetchSponsorCodes() {
+                if(!supabaseClient || !isRootAdmin) return;
+                try {
+                    const {data} = await supabaseClient.from('sponsor_codes').select('*').order('created_at', { ascending: false });
+                    allSponsorCodes = data || [];
+                    if (!document.getElementById('sponsorCodesContainer').classList.contains('hidden')) renderSponsorCodes();
+                } catch(e) {}
+            }
+
+            function renderSponsorCodes() {
+                if(!isRootAdmin) return;
+                let items = [...allSponsorCodes];
+                
+                const filter = document.getElementById('sponsorFilter').value;
+                if(filter === 'used') items = items.filter(i => i.is_used === true);
+                else if(filter === 'unused') items = items.filter(i => i.is_used === false);
+                
+                const totalPages = Math.ceil(items.length / 20) || 1; 
+                if (currentSponsorPage > totalPages) currentSponsorPage = totalPages;
+                const slice = items.slice((currentSponsorPage - 1) * 20, currentSponsorPage * 20);
+
+                document.getElementById('sponsorCodesGrid').innerHTML = slice.map(c => `
+                    <div class="bg-[#1a1e23] border ${c.is_used ? 'border-red-500/30' : 'border-green-500/30'} rounded p-3 flex flex-col gap-1 relative group hover:border-yellow-400 transition-colors">
+                        <div class="font-mono text-lg tracking-widest ${c.is_used ? 'text-red-400 line-through opacity-70' : 'text-green-400 font-bold'} text-center">${escapeHTML(c.code)}</div>
+                        ${c.is_used ? `<div class="text-[10px] text-gray-400 text-center truncate"><i class="fa-solid fa-user text-[8px] mr-1"></i>${escapeHTML(c.used_by || '未知')}</div>` : `<div class="text-[10px] text-green-500/50 text-center"><i class="fa-solid fa-circle-check text-[8px] mr-1"></i>未使用</div>`}
+                        
+                        <button class="delete-sponsor-btn absolute top-1/2 -translate-y-1/2 right-2 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-black/80 p-1.5 rounded" data-code="${escapeHTML(c.code)}"><i class="fa-solid fa-trash-can pointer-events-none text-xs"></i></button>
+                    </div>
+                `).join('');
+
+                if (totalPages > 1) {
+                    document.getElementById('sponsorCodesPagination').innerHTML = `
+                        <button class="prev-page-sponsor px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentSponsorPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>
+                        <span class="font-tactical text-gray-500 tracking-widest text-sm mt-1">PAGE ${currentSponsorPage}/${totalPages}</span>
+                        <button class="next-page-sponsor px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentSponsorPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
+                    `;
+                } else { document.getElementById('sponsorCodesPagination').innerHTML = ''; }
+            }
+
+            async function fetchInternalCodes() {
+                if(!supabaseClient || !isRootAdmin) return;
+                try {
+                    const {data} = await supabaseClient.from('internal_codes').select('*').order('created_at', { ascending: false });
+                    allInternalCodes = data || [];
+                    if (!document.getElementById('internalCodesContainer').classList.contains('hidden')) renderInternalCodes();
+                } catch(e) {}
+            }
+
+            function renderInternalCodes() {
+                if(!isRootAdmin) return;
+                let items = [...allInternalCodes];
+                
+                if (internalSearchQuery) items = items.filter(c => c.code.toLowerCase().includes(internalSearchQuery));
+                
+                const totalPages = Math.ceil(items.length / 20) || 1; 
+                if (currentInternalPage > totalPages) currentInternalPage = totalPages;
+                const slice = items.slice((currentInternalPage - 1) * 20, currentInternalPage * 20);
+
+                document.getElementById('internalCodesGrid').innerHTML = slice.map(c => `
+                    <div class="bg-[#1a1e23] border border-purple-500/30 rounded p-3 flex flex-col gap-1 relative group hover:border-purple-400 transition-colors">
+                        <div class="font-mono text-lg tracking-widest text-purple-400 font-bold text-center truncate pr-6" title="${escapeHTML(c.code)}">${escapeHTML(c.code)}</div>
+                        <button class="delete-internal-btn absolute top-1/2 -translate-y-1/2 right-2 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-black/80 p-1.5 rounded" data-code="${escapeHTML(c.code)}"><i class="fa-solid fa-trash-can pointer-events-none text-xs"></i></button>
+                    </div>
+                `).join('');
+
+                if (totalPages > 1) {
+                    document.getElementById('internalPagination').innerHTML = `
+                        <button class="prev-page-internal px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentInternalPage === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>
+                        <span class="font-tactical text-gray-500 tracking-widest text-sm mt-1">PAGE ${currentInternalPage}/${totalPages}</span>
+                        <button class="next-page-internal px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentInternalPage === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
+                    `;
+                } else { document.getElementById('internalPagination').innerHTML = ''; }
+            }
+
             function updateSharedUI() {
                 const allFavIds = favoriteGroups.flatMap(g => g.items).filter(i => i.id).map(i => i.id);
                 const allFavText = favoriteGroups.flatMap(g => g.items).filter(i => !i.id).map(i => i.text); 
@@ -1173,7 +1382,6 @@
                 document.querySelectorAll('.prompt-item').forEach(el => {
                     const isSaved = (el.dataset.id && allFavIds.includes(el.dataset.id)) || (!el.dataset.id && allFavText.includes(el.dataset.text));
                     el.classList.toggle('is-fav', isSaved);
-                    
                     const counter = el.querySelector('.fav-count-text');
                     if(counter && el.dataset.id) {
                         const dbItem = sharedItems.find(i => i.id === el.dataset.id);
@@ -1201,7 +1409,7 @@
                                 supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', itemData.id).then();
                             }
                         }
-                        activeGroupIndex = idx; currentPageFav = 1; saveCloudAndSync(); 
+                        activeGroupIndex = idx; renderGroups(); saveCloudAndSync(); 
                     }
                 }
                 document.querySelectorAll('.fav-tab').forEach(t => t.classList.remove('tab-drop-target'));
@@ -1213,7 +1421,7 @@
                 if (tab) {
                     e.preventDefault(); tab.classList.add('tab-drop-target');
                     clearTimeout(hoverExpandTimer);
-                    hoverExpandTimer = setTimeout(() => { activeGroupIndex = parseInt(tab.dataset.index); currentPageFav = 1; renderGroups(); }, 500);
+                    hoverExpandTimer = setTimeout(() => { activeGroupIndex = parseInt(tab.dataset.index); renderGroups(); }, 500);
                 }
             });
             document.body.addEventListener('dragleave', (e) => {
@@ -1225,7 +1433,7 @@
                 const t = e.target;
                 
                 const adminCard = t.closest('.admin-card');
-                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn') && !t.closest('.myshare-cb') && !t.closest('.admin-cb') && !t.closest('.approve-admin-btn')) {
+                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn') && !t.closest('.myshare-cb') && !t.closest('.admin-cb')) {
                     const id = adminCard.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
                         currentEditItemId = id; editModalId.textContent = `#${id}`; editModalName.value = item.name || ''; editModalText.value = item.text || ''; editModal.classList.remove('hidden');
@@ -1270,7 +1478,7 @@
                                 if (items.length > 0) {
                                     const groupName = (file.name.replace('.txt', '') + ' (导入)').substring(0, 20);
                                     favoriteGroups.push({ id: 'group_' + Date.now() + Math.floor(Math.random()*1000), name: groupName, items: items });
-                                    activeGroupIndex = favoriteGroups.length - 1; currentPageFav = 1; saveCloudAndSync(true); alert(`✅ 成功从 TXT 导入了 ${items.length} 个魔导书词条！`);
+                                    activeGroupIndex = favoriteGroups.length - 1; renderGroups(); saveCloudAndSync(true); alert(`✅ 成功从 TXT 导入了 ${items.length} 个魔导书词条！`);
                                 } else alert('TXT解析失败：未在文件中找到符合格式的提示词。');
                             } else {
                                 try {
@@ -1284,7 +1492,7 @@
                                             }); importedCount++;
                                         }
                                     });
-                                    if (importedCount > 0) { activeGroupIndex = favoriteGroups.length - 1; currentPageFav = 1; saveCloudAndSync(true); alert(`✅ 成功导入了 ${importedCount} 个标签组！`); }
+                                    if (importedCount > 0) { activeGroupIndex = favoriteGroups.length - 1; renderGroups(); saveCloudAndSync(true); alert(`✅ 成功导入了 ${importedCount} 个标签组！`); }
                                 } catch (err) { alert("JSON 读取失败: " + err.message); }
                             }
                         };
@@ -1302,7 +1510,6 @@
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
                     
-                    // 【权限判断核心】管理员和免审白名单用户，自动过审
                     const autoApprove = (isAdminLoggedIn || isWhitelistedPublisher);
                     
                     supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: autoApprove }]).then(({error}) => {
@@ -1313,7 +1520,7 @@
                             setTimeout(() => { syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`; }, 3000);
                             const btn = t.closest('.publish-item-btn'); const icon = btn.querySelector('i');
                             icon.className = 'fa-solid fa-check text-green-400 pointer-events-none text-xs w-3 text-center'; setTimeout(() => icon.className = 'fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center', 1500);
-                            document.getElementById('sortSelector').value = 'time'; currentPageShared = 1; fetchCloudData(); 
+                            document.getElementById('sortSelector').value = 'time'; fetchCloudData(); 
                             
                             if (!autoApprove) alert("发布成功！词汇已进入待审核队列，通过后将展示在大厅。");
                         }
@@ -1342,7 +1549,7 @@
                     let name = prompt('命名此指令 (最长20字符)：', '自定义指令'); if (!name) return; if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
                     const defIdx = favoriteGroups.findIndex(g => g.id === 'group_default');
                     favoriteGroups[defIdx].items.unshift({ _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: '', name: name, text: text });
-                    activeGroupIndex = defIdx; currentPageFav = 1; saveCloudAndSync(); return;
+                    activeGroupIndex = defIdx; renderGroups(); saveCloudAndSync(); return;
                 }
 
                 if (t.closest('#shareTerminalBtn')) {
@@ -1354,7 +1561,6 @@
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
                     
-                    // 【权限判断核心】管理员和免审白名单用户，自动过审
                     const autoApprove = (isAdminLoggedIn || isWhitelistedPublisher);
                     
                     supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: autoApprove }]).then(({error}) => {
@@ -1362,7 +1568,7 @@
                         else { 
                             syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">共享成功</span>`;
                             setTimeout(() => { syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`; }, 3000);
-                            document.getElementById('sortSelector').value = 'time'; currentPageShared=1; fetchCloudData(); 
+                            document.getElementById('sortSelector').value = 'time'; fetchCloudData(); 
                             
                             if (!autoApprove) alert("发布成功！词汇已进入待审核队列，通过后将展示在大厅。");
                         }
@@ -1374,7 +1580,7 @@
                 if (t.closest('#backBtn')) { if(history.length) { promptArea.value = history.pop(); document.getElementById('charCount').textContent = `剩余 ${50000 - promptArea.value.length} 字`; } return; }
                 if (t.closest('#refreshSharedBtn')) { fetchCloudData(); return; }
                 if (t.closest('#addGroupBtn')) { favoriteGroups.push({ id: 'group_'+Date.now(), name: '新标签', items: [] }); activeGroupIndex = favoriteGroups.length - 1; saveCloudAndSync(); return; }
-                if (t.closest('.fav-tab') && !t.closest('.delete-group-btn') && !t.closest('.rename-btn')) { activeGroupIndex = parseInt(t.closest('.fav-tab').dataset.index); currentPageFav = 1; renderGroups(); return; }
+                if (t.closest('.fav-tab') && !t.closest('.delete-group-btn') && !t.closest('.rename-btn')) { activeGroupIndex = parseInt(t.closest('.fav-tab').dataset.index); renderGroups(); return; }
                 if (t.closest('.delete-group-btn')) {
                     const idx = parseInt(t.closest('.fav-tab').dataset.index);
                     if (favoriteGroups[idx].id === 'group_default') return;
@@ -1392,31 +1598,155 @@
                             });
                         }
                         favoriteGroups.splice(idx, 1);
-                        if (activeGroupIndex >= favoriteGroups.length) {
-                            activeGroupIndex = favoriteGroups.length - 1;
-                        } else if (idx < activeGroupIndex) {
-                            activeGroupIndex--;
-                        }
+                        if (activeGroupIndex >= favoriteGroups.length) activeGroupIndex = favoriteGroups.length - 1;
+                        else if (idx < activeGroupIndex) activeGroupIndex--;
                         if (activeGroupIndex < 0) activeGroupIndex = 0;
-                        currentPageFav = 1;
-                        saveCloudAndSync();
+                        renderGroups(); saveCloudAndSync();
                         if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
                     }
                     return;
                 }
                 if (t.closest('.rename-btn')) { const inp = t.closest('.fav-tab').querySelector('.group-name-input'); if(inp) { inp.readOnly = false; inp.focus(); } return; }
-                if (t.closest('.prev-page-fav')) { currentPageFav--; renderGroups(); return; }
-                if (t.closest('.next-page-fav')) { currentPageFav++; renderGroups(); return; }
-                if (t.closest('.prev-page-shared')) { currentPageShared--; renderSharedGrid(); return; }
-                if (t.closest('.next-page-shared')) { currentPageShared++; renderSharedGrid(); return; }
+
                 if (t.closest('.prev-page-myshares')) { currentPageMyShares--; renderMyShares(); return; }
                 if (t.closest('.next-page-myshares')) { currentPageMyShares++; renderMyShares(); return; }
                 if (t.closest('.prev-page-admin')) { currentPageAdmin--; renderAdminPanel(); return; }
                 if (t.closest('.next-page-admin')) { currentPageAdmin++; renderAdminPanel(); return; }
-                
                 if (t.closest('.prev-page-users')) { currentPageUsers--; renderUserManager(); return; }
                 if (t.closest('.next-page-users')) { currentPageUsers++; renderUserManager(); return; }
+                if (t.closest('.prev-page-sponsor')) { currentSponsorPage--; renderSponsorCodes(); return; }
+                if (t.closest('.next-page-sponsor')) { currentSponsorPage++; renderSponsorCodes(); return; }
+                if (t.closest('.prev-page-internal')) { currentInternalPage--; renderInternalCodes(); return; }
+                if (t.closest('.next-page-internal')) { currentInternalPage++; renderInternalCodes(); return; }
+
+                // 【新增】超级管理员删除单个赞助码
+                if (t.closest('.delete-sponsor-btn')) {
+                    if(!supabaseClient) return;
+                    const code = t.closest('.delete-sponsor-btn').dataset.code;
+                    if(confirm(`确定永久删除赞助码 [ ${code} ] 吗？`)) {
+                        supabaseClient.from('sponsor_codes').delete().eq('code', code).then(() => fetchSponsorCodes());
+                    } return;
+                }
+
+                if (t.closest('#toggleSponsorReqBtn')) {
+                    if(!supabaseClient) return;
+                    const newState = !isSponsorCodeRequired;
+                    supabaseClient.from('app_settings').update({ require_code: newState }).eq('id', 1).then(({error}) => {
+                        if(!error) {
+                            isSponsorCodeRequired = newState;
+                            t.closest('#toggleSponsorReqBtn').checked = newState;
+                            alert(newState ? "✅ 已全网开启注册强制验证 (赞助码/口令)！" : "❌ 已关闭全网注册验证。");
+                        } else alert("设置失败: " + error.message);
+                    });
+                    return;
+                }
                 
+                if (t.closest('#saveSponsorLinkBtn')) {
+                    if(!supabaseClient) return;
+                    const linkUrl = document.getElementById('sponsorLinkInput').value.trim();
+                    supabaseClient.from('app_settings').update({ sponsor_link: linkUrl }).eq('id', 1).then(({error}) => {
+                        if(!error) alert("✅ 前端购卡获取链接已保存！"); else alert("保存失败: " + error.message);
+                    });
+                    return;
+                }
+
+                if (t.closest('#generateCodesBtn')) {
+                    if(!supabaseClient) return;
+                    let count = parseInt(document.getElementById('genSponsorCount').value);
+                    if (isNaN(count) || count < 1 || count > 500) { alert("每次生成数量建议在 1 - 500 之间"); return; }
+                    
+                    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789';
+                    const newCodes = [];
+                    for(let i=0; i<count; i++) {
+                        let code = '';
+                        for(let j=0; j<9; j++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+                        newCodes.push({ code: code, is_used: false });
+                    }
+                    
+                    document.getElementById('generateCodesBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    supabaseClient.from('sponsor_codes').insert(newCodes).then(({error}) => {
+                        document.getElementById('generateCodesBtn').innerHTML = '<i class="fa-solid fa-bolt mr-1"></i>批量生成';
+                        if(!error) { 
+                            alert(`成功生成 ${count} 个赞助码！`); 
+                            fetchSponsorCodes();
+                            
+                            if (document.getElementById('autoExportCodeCb').checked) {
+                                let csvContent = "新生成的赞助激活码\n";
+                                newCodes.forEach(c => csvContent += `${c.code}\n`);
+                                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); 
+                                const url = URL.createObjectURL(blob); const link = document.createElement("a");
+                                link.setAttribute("href", url); link.setAttribute("download", `新生成赞助码_${new Date().getTime()}.csv`);
+                                document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                            }
+                        }
+                        else alert("生成出错 (概率重复): " + error.message);
+                    });
+                    return;
+                }
+
+                if (t.closest('#exportCodesBtn')) {
+                    let items = [...allSponsorCodes];
+                    const filter = document.getElementById('sponsorFilter').value;
+                    if(filter === 'used') items = items.filter(i => i.is_used === true);
+                    else if(filter === 'unused') items = items.filter(i => i.is_used === false);
+                    
+                    if(items.length === 0) { alert("当前分类下没有可以导出的赞助码！"); return; }
+                    
+                    let csvContent = "赞助激活码,状态,使用者\n";
+                    items.forEach(c => csvContent += `${c.code},${c.is_used ? '已使用' : '未使用'},${c.used_by || ''}\n`);
+                    
+                    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); 
+                    const url = URL.createObjectURL(blob); const link = document.createElement("a");
+                    link.setAttribute("href", url); link.setAttribute("download", `耀AI赞助码_${filter}_${new Date().getTime()}.csv`);
+                    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+                    return;
+                }
+                
+                if (t.closest('#addInternalCodeBtn')) {
+                    if(!supabaseClient) return;
+                    const code = document.getElementById('singleInternalCode').value.trim();
+                    if (!code) return alert("请输入口令！");
+                    
+                    document.getElementById('addInternalCodeBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                    supabaseClient.from('internal_codes').upsert([{ code: code }], { onConflict: 'code' }).then(({error}) => {
+                        document.getElementById('addInternalCodeBtn').innerHTML = '<i class="fa-solid fa-plus mr-1"></i>单个添加';
+                        if(!error) { document.getElementById('singleInternalCode').value = ''; fetchInternalCodes(); }
+                        else alert("添加失败: " + error.message);
+                    });
+                    return;
+                }
+                
+                if (t.closest('#importInternalBtn')) {
+                    const input = document.createElement('input'); input.type = 'file'; input.accept = '.txt, .csv';
+                    input.onchange = ev => {
+                        const file = ev.target.files[0]; if (!file) return; const reader = new FileReader();
+                        reader.onload = async event => {
+                            const lines = event.target.result.split(/\r?\n/);
+                            let validCodes = lines.map(l => l.trim()).filter(l => l.length > 0 && !l.includes(',')); 
+                            
+                            if(validCodes.length === 0) return alert("未读取到有效口令！");
+                            
+                            const insertData = validCodes.map(code => ({ code: code }));
+                            document.getElementById('importInternalBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 导入中';
+                            
+                            const {error} = await supabaseClient.from('internal_codes').upsert(insertData, { onConflict: 'code' });
+                            
+                            document.getElementById('importInternalBtn').innerHTML = '<i class="fa-solid fa-file-import mr-1"></i>批量导入 (Excel/TXT)';
+                            if(!error) { alert(`✅ 成功导入/更新了 ${validCodes.length} 个不重复内部口令！`); fetchInternalCodes(); }
+                            else alert("导入失败: " + error.message);
+                        };
+                        reader.readAsText(file);
+                    }; input.click(); return;
+                }
+                
+                if (t.closest('.delete-internal-btn')) {
+                    if(!supabaseClient) return;
+                    const code = t.closest('.delete-internal-btn').dataset.code;
+                    if(confirm(`确定删除内部口令 [ ${code} ] 吗？`)) {
+                        supabaseClient.from('internal_codes').delete().eq('code', code).then(() => fetchInternalCodes());
+                    } return;
+                }
+
                 if (t.closest('#mySelectAllBtn')) { document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = true); return; }
                 if (t.closest('#myInverseSelectBtn')) { document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = !cb.checked); return; }
                 if (t.closest('#adminSelectAllBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = true); return; }
@@ -1449,11 +1779,7 @@
                     btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
                     
                     supabaseClient.from('shared_prompts').update({ is_approved: true }).eq('id', id).then(({error}) => { 
-                        if(!error) fetchCloudData(); 
-                        else {
-                            alert('审核失败: ' + error.message);
-                            btn.innerHTML = originalIcon;
-                        }
+                        if(!error) fetchCloudData(); else { alert('审核失败: ' + error.message); btn.innerHTML = originalIcon; }
                     }); 
                     return;
                 }
@@ -1467,37 +1793,25 @@
                 }
                 
                 if (t.closest('.delete-user-btn')) {
-                    const btn = t.closest('.delete-user-btn');
-                    const id = btn.dataset.id;
-                    const acc = btn.dataset.acc;
+                    const btn = t.closest('.delete-user-btn'); const id = btn.dataset.id; const acc = btn.dataset.acc;
                     if (acc === ROOT_ADMIN) { alert("非法操作：无法删除 Root 账户！"); return; }
                     
                     if (confirm(`⚠️ 极度危险操作：确定要彻底删除用户【${acc}】吗？\n这将会连带清空该用户发布过的所有共享词汇、云端收藏夹记录！`)) {
                         if(!supabaseClient) return;
                         const originalHtml = btn.innerHTML;
-                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
-                        btn.disabled = true;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>'; btn.disabled = true;
                         
                         supabaseClient.from('shared_prompts').delete().eq('authorId', id).then(() => {
                             supabaseClient.from('user_favorites').delete().eq('user_id', id).then(() => {
                                 supabaseClient.from('app_users').delete().eq('id', id).then(({error}) => {
-                                    if(!error) {
-                                        alert(`已将违规用户 ${acc} 彻底从云端抹除。`);
-                                        fetchAllUsers();
-                                        fetchCloudData(); 
-                                    } else {
-                                        alert("删除失败: " + error.message);
-                                        btn.innerHTML = originalHtml;
-                                        btn.disabled = false;
-                                    }
+                                    if(!error) { alert(`已将违规用户 ${acc} 彻底从云端抹除。`); fetchAllUsers(); fetchCloudData(); } 
+                                    else { alert("删除失败: " + error.message); btn.innerHTML = originalHtml; btn.disabled = false; }
                                 });
                             });
                         });
-                    }
-                    return;
+                    } return;
                 }
 
-                // 添加子管理员
                 if (t.closest('#addSubAdminBtn') && supabaseClient) {
                     const acc = document.getElementById('newSubAdminAccount').value.trim(); if (!acc || acc === ROOT_ADMIN || subAdmins.includes(acc)) return;
                     supabaseClient.from('admin_whitelist').insert([{ account_name: acc }]).then(({error}) => {
@@ -1505,15 +1819,12 @@
                     }); return;
                 }
                 
-                // 删除子管理员
                 if (t.closest('.delete-subadmin-btn') && supabaseClient) {
                     const acc = t.closest('.delete-subadmin-btn').dataset.account;
-                    if(confirm(`确定要移除管理员身份: ${acc}?`)) {
-                        supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then(({error}) => {});
-                    } return;
+                    if(confirm(`确定要移除管理员身份: ${acc}?`)) supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then();
+                    return;
                 }
 
-                // 【新增】添加免审发布者
                 if (t.closest('#addPublisherBtn') && supabaseClient) {
                     const acc = document.getElementById('newPublisherAccount').value.trim(); if (!acc || publisherWhitelist.includes(acc)) return;
                     supabaseClient.from('publisher_whitelist').insert([{ account_name: acc }]).then(({error}) => {
@@ -1521,12 +1832,10 @@
                     }); return;
                 }
 
-                // 【新增】删除免审发布者
                 if (t.closest('.delete-publisher-btn') && supabaseClient) {
                     const acc = t.closest('.delete-publisher-btn').dataset.account;
-                    if(confirm(`确定要移除该用户的免审发布特权: ${acc}?`)) {
-                        supabaseClient.from('publisher_whitelist').delete().eq('account_name', acc).then(({error}) => {});
-                    } return;
+                    if(confirm(`确定要移除该用户的免审发布特权: ${acc}?`)) supabaseClient.from('publisher_whitelist').delete().eq('account_name', acc).then();
+                    return;
                 }
 
                 if (t.closest('#adminBatchDelete') && supabaseClient) {
@@ -1534,18 +1843,15 @@
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
                     if(confirm(`删除 ${ids.length} 个词汇？`)) {
                         supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => {
-                            const idSet = new Set(ids);
-                            let changed = false;
+                            const idSet = new Set(ids); let changed = false;
                             favoriteGroups.forEach(g => {
                                 const before = g.items.length;
                                 g.items = g.items.filter(i => !i.id || !idSet.has(i.id));
                                 if (g.items.length !== before) changed = true;
                             });
-                            if (changed) saveCloudAndSync(true);
-                            fetchCloudData();
+                            if (changed) saveCloudAndSync(true); fetchCloudData();
                         });
-                    }
-                    return;
+                    } return;
                 }
                 
                 if (t.closest('#myBatchDelete') && supabaseClient) {
@@ -1553,18 +1859,15 @@
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
                     if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) {
                         supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => {
-                            const idSet = new Set(ids);
-                            let changed = false;
+                            const idSet = new Set(ids); let changed = false;
                             favoriteGroups.forEach(g => {
                                 const before = g.items.length;
                                 g.items = g.items.filter(i => !i.id || !idSet.has(i.id));
                                 if (g.items.length !== before) changed = true;
                             });
-                            if (changed) saveCloudAndSync(true);
-                            fetchCloudData();
+                            if (changed) saveCloudAndSync(true); fetchCloudData();
                         });
-                    }
-                    return;
+                    } return;
                 }
 
                 if (t.closest('.fav-action')) {
@@ -1626,27 +1929,15 @@
                 }
             }, true);
             
-            // 分离绑定的各大版块搜索监听器
-            const fSearch = document.getElementById('favSearchInput');
-            if(fSearch) fSearch.oninput = (e) => { favSearchQuery = e.target.value.toLowerCase(); currentPageFav=1; renderGroups(); };
-            
-            const mSearch = document.getElementById('mySharesSearchInput');
-            if(mSearch) mSearch.oninput = (e) => { mySharesSearchQuery = e.target.value.toLowerCase(); currentPageMyShares=1; renderMyShares(); };
-            
-            const aSearch = document.getElementById('adminSearchInput');
-            if(aSearch) aSearch.oninput = (e) => { adminSearchQuery = e.target.value.toLowerCase(); currentPageAdmin=1; renderAdminPanel(); };
+            const fSearch = document.getElementById('favSearchInput'); if(fSearch) fSearch.oninput = (e) => { favSearchQuery = e.target.value.toLowerCase(); renderGroups(); };
+            const mSearch = document.getElementById('mySharesSearchInput'); if(mSearch) mSearch.oninput = (e) => { mySharesSearchQuery = e.target.value.toLowerCase(); currentPageMyShares=1; renderMyShares(); };
+            const aSearch = document.getElementById('adminSearchInput'); if(aSearch) aSearch.oninput = (e) => { adminSearchQuery = e.target.value.toLowerCase(); currentPageAdmin=1; renderAdminPanel(); };
+            const sSearch = document.getElementById('sharedSearchInput'); if(sSearch) sSearch.oninput = (e) => { sharedSearchQuery = e.target.value.toLowerCase(); renderSharedGrid(); };
+            const uSearch = document.getElementById('userSearchInput'); if(uSearch) uSearch.oninput = (e) => { userSearchQuery = e.target.value.toLowerCase(); currentPageUsers=1; renderUserManager(); };
+            const iSearch = document.getElementById('internalSearchInput'); if(iSearch) iSearch.oninput = (e) => { internalSearchQuery = e.target.value.toLowerCase(); currentInternalPage=1; renderInternalCodes(); };
 
-            const sSearch = document.getElementById('sharedSearchInput');
-            if(sSearch) sSearch.oninput = (e) => { sharedSearchQuery = e.target.value.toLowerCase(); currentPageShared=1; renderSharedGrid(); };
-            
-            const uSearch = document.getElementById('userSearchInput');
-            if(uSearch) uSearch.oninput = (e) => { userSearchQuery = e.target.value.toLowerCase(); currentPageUsers=1; renderUserManager(); };
-
-            const sSort = document.getElementById('sortSelector');
-            if(sSort) sSort.onchange = () => { currentPageShared=1; renderSharedGrid(); };
-            
-            const aSort = document.getElementById('adminSortSelector');
-            if(aSort) aSort.onchange = () => { currentPageAdmin=1; renderAdminPanel(); };
+            const sSort = document.getElementById('sortSelector'); if(sSort) sSort.onchange = () => { renderSharedGrid(); };
+            const aSort = document.getElementById('adminSortSelector'); if(aSort) aSort.onchange = () => { currentPageAdmin=1; renderAdminPanel(); };
 
             const aStatus = document.getElementById('adminStatusSelector');
             if(aStatus) aStatus.onchange = (e) => { 
@@ -1656,6 +1947,15 @@
                 else e.target.className = "bg-transparent border border-white/10 rounded px-3 py-2 text-gray-300 font-tactical outline-none cursor-pointer hover:text-white transition-colors mr-2";
                 renderAdminPanel(); 
             };
+
+            const sFilter = document.getElementById('sponsorFilter');
+            if(sFilter) sFilter.onchange = (e) => {
+                currentSponsorPage = 1;
+                if(e.target.value === 'used') e.target.className = "bg-transparent border border-white/10 rounded px-4 py-2 text-red-500 font-tactical outline-none cursor-pointer hover:text-white transition-colors text-lg";
+                else if(e.target.value === 'unused') e.target.className = "bg-transparent border border-white/10 rounded px-4 py-2 text-green-500 font-tactical outline-none cursor-pointer hover:text-white transition-colors text-lg";
+                else e.target.className = "bg-transparent border border-white/10 rounded px-4 py-2 text-white font-tactical outline-none cursor-pointer hover:text-white transition-colors text-lg";
+                renderSponsorCodes();
+            }
 
         });
     </script>
