@@ -147,7 +147,10 @@
                             <i class="fa-solid fa-share-nodes"></i> 共享管理
                         </h3>
                         <h3 id="tabAdmin" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
-                            <i class="fa-solid fa-shield-halved"></i> 共享管理(ROOT)
+                            <i class="fa-solid fa-shield-halved"></i> 审核管理 (Admin)
+                        </h3>
+                        <h3 id="tabUserManager" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
+                            <i class="fa-solid fa-users"></i> 用户管理 (ROOT)
                         </h3>
                     </div>
                     
@@ -190,14 +193,25 @@
                     </div>
                     
                     <div id="adminContainer" class="hidden flex-col gap-4">
-                        <div id="subAdminManager" class="hidden bg-[#161b22] p-4 rounded-lg border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.05)] mb-2">
-                            <h4 class="font-tactical text-xl text-purple-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-users-gear"></i> 子管理员白名单 (ROOT专属)</h4>
-                            <div class="flex gap-4 mb-4">
-                                <input type="text" id="newSubAdminAccount" placeholder="输入新增管理员账户名..." class="bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white w-64 text-sm focus:border-purple-400 transition-all">
-                                <button id="addSubAdminBtn" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-purple-500/30 transition-colors"><i class="fa-solid fa-plus mr-1"></i> 授权管理员</button>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-2">
+                            <div id="subAdminManager" class="hidden bg-[#161b22] p-4 rounded-lg border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.05)]">
+                                <h4 class="font-tactical text-xl text-purple-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-users-gear"></i> 子管理员白名单 (仅 Root 可控)</h4>
+                                <div class="flex gap-4 mb-4">
+                                    <input type="text" id="newSubAdminAccount" placeholder="输入新增管理员账户名..." class="flex-1 bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white text-sm focus:border-purple-400 transition-all">
+                                    <button id="addSubAdminBtn" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-purple-500/30 transition-colors whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i> 授权管理</button>
+                                </div>
+                                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto" id="subAdminList"></div>
                             </div>
-                            <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto" id="subAdminList"></div>
+                            <div class="bg-[#161b22] p-4 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.05)]">
+                                <h4 class="font-tactical text-xl text-blue-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-user-check"></i> 免审发布者白名单 (Admin 可管理)</h4>
+                                <div class="flex gap-4 mb-4">
+                                    <input type="text" id="newPublisherAccount" placeholder="输入免审核用户的账户名..." class="flex-1 bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white text-sm focus:border-blue-400 transition-all">
+                                    <button id="addPublisherBtn" class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-blue-500/30 transition-colors whitespace-nowrap"><i class="fa-solid fa-plus mr-1"></i> 添加免审</button>
+                                </div>
+                                <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto" id="publisherList"></div>
+                            </div>
                         </div>
+
                         <div class="flex justify-between items-center bg-[#161b22] p-4 rounded-lg border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] flex-wrap gap-4">
                             <div class="flex items-center gap-4 shrink-0">
                                 <span class="text-[#ff4655] font-tactical text-lg mr-2 tracking-wider"><i class="fa-solid fa-circle-info mr-2"></i>点击卡片即可编辑词汇</span>
@@ -208,6 +222,13 @@
                                 </div>
                             </div>
                             <div class="flex items-center gap-3 shrink-0">
+                                <span class="text-gray-500 font-tactical tracking-widest text-lg">STATUS:</span>
+                                <select id="adminStatusSelector" class="bg-transparent border border-white/10 rounded px-3 py-2 text-red-400 font-tactical outline-none cursor-pointer hover:text-white transition-colors mr-2">
+                                    <option value="pending" class="bg-white text-red-500 font-bold">🔴 待审核专区</option>
+                                    <option value="approved" class="bg-white text-green-500 font-bold">🟢 已通过词汇</option>
+                                    <option value="all" class="bg-white text-black font-bold">⚪ 全局大盘</option>
+                                </select>
+
                                 <span class="text-gray-500 font-tactical tracking-widest text-lg">ADMIN SORT:</span>
                                 <select id="adminSortSelector" class="bg-transparent border border-white/10 rounded px-3 py-2 text-gray-300 font-tactical outline-none cursor-pointer hover:text-white transition-colors">
                                     <option value="time" class="bg-white text-black font-bold">🕒 最新发布</option>
@@ -219,11 +240,24 @@
                         </div>
                         <div class="relative w-full max-w-md mb-2 mt-2">
                             <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                            <input type="text" id="adminSearchInput" placeholder="ROOT管理全局检索 (支持名称/ID)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-red-400">
+                            <input type="text" id="adminSearchInput" placeholder="检索全局词汇 (支持名称/ID)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-red-400">
                         </div>
                         <div id="adminGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"></div>
                         <div id="adminPagination" class="flex justify-center items-center gap-4 mt-2"></div>
                     </div>
+
+                    <div id="userManagerContainer" class="hidden flex-col gap-4">
+                        <div class="flex justify-between items-center bg-[#161b22] p-4 rounded-lg border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.05)]">
+                            <span class="text-green-400 font-tactical text-lg mr-6 tracking-wider shrink-0"><i class="fa-solid fa-user-shield mr-2"></i>全站用户数据总览 (仅 Root 可见)</span>
+                        </div>
+                        <div class="relative w-full max-w-md mb-2 mt-2">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="userSearchInput" placeholder="检索用户 (支持账户名/昵称)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-green-400">
+                        </div>
+                        <div id="userManagerGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+                        <div id="userManagerPagination" class="flex justify-center items-center gap-4 mt-2"></div>
+                    </div>
+
                 </div>
 
                 <div id="publicHallContainer" class="mt-12 border-t border-white/10 pt-8">
@@ -376,8 +410,11 @@
 
         const ROOT_ADMIN = '893107072@qq.com'; 
         let subAdmins = [];
+        let publisherWhitelist = []; // 【新增】免审白名单数组
+        
         let isRootAdmin = false;
         let isAdminLoggedIn = false;
+        let isWhitelistedPublisher = false; // 【新增】当前用户是否在免审名单内
         
         let currentUser = null; 
 
@@ -421,16 +458,31 @@
             let favSearchQuery = '', mySharesSearchQuery = '', adminSearchQuery = '', sharedSearchQuery = '';
             let history = []; 
 
+            let allUsersList = [];
+            let userSearchQuery = '';
+            let currentPageUsers = 1;
+
             let favoriteGroups = []; 
             let sharedItems = [];
 
-            // 开启 Supabase 实时广播订阅大厅
+            // 开启 Supabase 实时广播订阅 (词汇大厅、管理员表、白名单表)
             if (supabaseClient) {
-                supabaseClient.channel('realtime_shared_prompts')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, payload => {
-                        fetchCloudData(false);
-                    })
-                    .subscribe();
+                const channel = supabaseClient.channel('system_realtime');
+                
+                // 监听大厅词汇变动
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, payload => {
+                    fetchCloudData(false);
+                });
+                // 监听子管理白名单变动
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'admin_whitelist' }, payload => {
+                    if (currentUser) fetchPermissions(true);
+                });
+                // 监听免审发布者白名单变动
+                channel.on('postgres_changes', { event: '*', schema: 'public', table: 'publisher_whitelist' }, payload => {
+                    if (currentUser) fetchPermissions(true);
+                });
+
+                channel.subscribe();
             }
 
             promptArea.addEventListener('input', () => {
@@ -438,6 +490,56 @@
                 const remaining = max - promptArea.value.length;
                 charCount.textContent = `剩余 ${remaining} 字`;
             });
+
+            // 【提取】动态拉取权限信息的函数 (供登录与实时更新使用)
+            async function fetchPermissions(isRealtimeUpdate = false) {
+                if (!supabaseClient || !currentUser) return;
+                try {
+                    // 并发获取两条白名单数据
+                    const [adminRes, pubRes] = await Promise.all([
+                        supabaseClient.from('admin_whitelist').select('account_name'),
+                        supabaseClient.from('publisher_whitelist').select('account_name')
+                    ]);
+
+                    subAdmins = adminRes.data ? adminRes.data.map(i => i.account_name) : [];
+                    publisherWhitelist = pubRes.data ? pubRes.data.map(i => i.account_name) : [];
+
+                    isRootAdmin = (currentUser.account_name === ROOT_ADMIN);
+                    isAdminLoggedIn = isRootAdmin || subAdmins.includes(currentUser.account_name);
+                    isWhitelistedPublisher = publisherWhitelist.includes(currentUser.account_name);
+
+                    // 动态控制 UI 显示/隐藏
+                    if (isAdminLoggedIn) {
+                        document.getElementById('tabAdmin').classList.remove('hidden');
+                        if (isRootAdmin) {
+                            document.getElementById('subAdminManager').classList.remove('hidden');
+                            document.getElementById('tabUserManager').classList.remove('hidden');
+                            fetchAllUsers();
+                        } else {
+                            document.getElementById('subAdminManager').classList.add('hidden');
+                            document.getElementById('tabUserManager').classList.add('hidden');
+                        }
+                    } else {
+                        document.getElementById('tabAdmin').classList.add('hidden');
+                        document.getElementById('tabUserManager').classList.add('hidden');
+                        
+                        // 如果权限被移除时，用户正处在管理员界面，强制踢回大厅
+                        if (!document.getElementById('adminContainer').classList.contains('hidden')) {
+                            document.getElementById('tabFavorites').click();
+                            if(isRealtimeUpdate) alert("通知：您的管理员权限已被移除。");
+                        }
+                    }
+
+                    // 如果当前处在 Admin 面板，实时刷新面板里的两张白名单列表
+                    if (!document.getElementById('adminContainer').classList.contains('hidden') && isAdminLoggedIn) {
+                        renderSubAdmins();
+                        renderPublishers();
+                    }
+
+                } catch (e) {
+                    console.error("权限数据同步失败", e);
+                }
+            }
 
             async function fetchCloudData(showLoading = true) {
                 if (!supabaseClient) return;
@@ -539,26 +641,9 @@
                     loginBtn.className = "cursor-default px-5 py-2.5 text-sm bg-green-600/20 border border-green-500/50 rounded text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.1)] shrink-0";
                     logoutBtn.classList.remove('hidden');
 
-                    if(supabaseClient) {
-                        try {
-                            const { data } = await supabaseClient.from('admin_whitelist').select('account_name');
-                            subAdmins = data ? data.map(i => i.account_name) : [];
-                        } catch(e) {}
-                    }
-                    isRootAdmin = (u.account_name === ROOT_ADMIN);
-                    isAdminLoggedIn = isRootAdmin || subAdmins.includes(u.account_name);
+                    // 获取权限并刷新界面 (替代旧的直接赋值逻辑)
+                    await fetchPermissions(false);
 
-                    if (isAdminLoggedIn) {
-                        document.getElementById('tabAdmin').classList.remove('hidden');
-                        if (isRootAdmin) {
-                            document.getElementById('subAdminManager').classList.remove('hidden');
-                            renderSubAdmins();
-                        } else {
-                            document.getElementById('subAdminManager').classList.add('hidden');
-                        }
-                    } else {
-                        document.getElementById('tabAdmin').classList.add('hidden');
-                    }
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`;
                 } else {
                     document.getElementById('loginText').textContent = "登录 / 注册";
@@ -566,8 +651,10 @@
                     logoutBtn.classList.add('hidden');
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-user-lock text-gray-500"></i> <span class="text-gray-500">未登录</span>`;
-                    isAdminLoggedIn = false; isRootAdmin = false;
+                    
+                    isAdminLoggedIn = false; isRootAdmin = false; isWhitelistedPublisher = false;
                     document.getElementById('tabAdmin').classList.add('hidden');
+                    document.getElementById('tabUserManager').classList.add('hidden');
                     if(!adminContainer.classList.contains('hidden')) document.getElementById('tabFavorites').click();
                 }
             }
@@ -675,11 +762,15 @@
                 document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
                 document.getElementById('tabMyShares').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
                 document.getElementById('tabAdmin').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
+                document.getElementById('tabUserManager').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
+                
                 if(isAdminLoggedIn) document.getElementById('tabAdmin').classList.remove('hidden');
+                if(isRootAdmin) document.getElementById('tabUserManager').classList.remove('hidden');
                 
                 favWrapper.classList.add('hidden'); 
                 mySharesContainer.classList.add('hidden'); 
                 adminContainer.classList.add('hidden'); 
+                document.getElementById('userManagerContainer').classList.add('hidden'); 
                 publicHallContainer.classList.add('hidden');
             }
 
@@ -703,6 +794,15 @@
                 document.getElementById('tabAdmin').className = "cursor-pointer font-tactical text-2xl text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-red-400 pb-1 transition-all";
                 adminContainer.classList.remove('hidden'); adminContainer.classList.add('flex');
                 renderAdminPanel();
+                renderSubAdmins();
+                renderPublishers();
+            };
+
+            document.getElementById('tabUserManager').onclick = () => {
+                if(!isRootAdmin) return; resetTabs();
+                document.getElementById('tabUserManager').className = "cursor-pointer font-tactical text-2xl text-green-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-green-400 pb-1 transition-all";
+                document.getElementById('userManagerContainer').classList.remove('hidden'); document.getElementById('userManagerContainer').classList.add('flex');
+                renderUserManager();
             };
 
             function renderGroups() {
@@ -828,7 +928,6 @@
                             itemEl.remove(); 
                             if (!isDuplicate) { 
                                 targetG.items.splice(evt.newIndex, 0, itemData); 
-                                // 【新挂载】拖拽添加如果来自于大厅，同样 +1 云端收藏
                                 if (itemData.id && supabaseClient) {
                                     const dbItem = sharedItems.find(i => i.id === itemData.id);
                                     if (dbItem) {
@@ -855,7 +954,6 @@
                 const sortBy = document.getElementById('sortSelector')?.value || 'time';
                 let items = [...sharedItems].filter(i => (i.name||'').toLowerCase().includes(sharedSearchQuery) || (i.id && i.id.includes(sharedSearchQuery.replace('#',''))));
                 
-                // 【新增】拦截未审核的词条，且兼容旧数据 (null 视为已审核)
                 items = items.filter(i => i.is_approved !== false); 
                 
                 items.sort((a,b) => {
@@ -957,9 +1055,27 @@
                 `).join('');
             }
 
+            function renderPublishers() {
+                const list = document.getElementById('publisherList'); if(!list) return;
+                list.innerHTML = publisherWhitelist.map(acc => `
+                    <div class="flex items-center gap-2 bg-blue-500/20 border border-blue-500/30 text-blue-200 px-3 py-1.5 rounded-full text-sm">
+                        <i class="fa-solid fa-check-double"></i> ${acc}
+                        <button class="delete-publisher-btn text-blue-400 hover:text-red-400 ml-1 transition-colors" data-account="${acc}"><i class="fa-solid fa-xmark pointer-events-none"></i></button>
+                    </div>
+                `).join('');
+            }
+
             function renderAdminPanel() {
                 if (!isAdminLoggedIn) return;
                 let items = [...sharedItems];
+
+                const statusFilter = document.getElementById('adminStatusSelector')?.value || 'pending';
+                if (statusFilter === 'pending') {
+                    items = items.filter(i => i.is_approved === false);
+                } else if (statusFilter === 'approved') {
+                    items = items.filter(i => i.is_approved !== false);
+                }
+
                 if (adminSearchQuery) items = items.filter(i => (i.name||'').toLowerCase().includes(adminSearchQuery) || (i.id && i.id.includes(adminSearchQuery.replace('#',''))) || (i.text||'').toLowerCase().includes(adminSearchQuery));
 
                 const sortBy = document.getElementById('adminSortSelector')?.value || 'time';
@@ -1007,6 +1123,49 @@
                 } else { document.getElementById('adminPagination').innerHTML = ''; }
             }
 
+            async function fetchAllUsers() {
+                if (!supabaseClient || !isRootAdmin) return;
+                try {
+                    const { data, error } = await supabaseClient.from('app_users').select('*').order('id', { ascending: false });
+                    if (!error) {
+                        allUsersList = data || [];
+                        if (!document.getElementById('userManagerContainer').classList.contains('hidden')) {
+                            renderUserManager();
+                        }
+                    }
+                } catch (err) { console.error("获取用户列表失败", err); }
+            }
+
+            function renderUserManager() {
+                if (!isRootAdmin) return;
+                let items = [...allUsersList];
+                if (userSearchQuery) {
+                    items = items.filter(u => (u.account_name||'').toLowerCase().includes(userSearchQuery) || (u.nickname||'').toLowerCase().includes(userSearchQuery));
+                }
+                const totalPages = Math.ceil(items.length / ADMIN_ITEMS_PER_PAGE) || 1;
+                if (currentPageUsers > totalPages) currentPageUsers = totalPages;
+                const slice = items.slice((currentPageUsers - 1) * ADMIN_ITEMS_PER_PAGE, currentPageUsers * ADMIN_ITEMS_PER_PAGE);
+
+                document.getElementById('userManagerGrid').innerHTML = slice.map(u => `
+                    <div class="bg-[#1a1e23] border border-white/10 rounded-lg p-4 flex flex-col gap-2 hover:border-green-500/50 transition-colors relative group">
+                        <div class="text-xs text-gray-500 font-mono break-all pr-6">UID: ${u.id}</div>
+                        <div class="font-bold text-white text-lg flex items-center gap-2"><i class="fa-solid fa-user text-green-400"></i> ${escapeHTML(u.nickname)}</div>
+                        <div class="text-sm text-gray-400 font-mono"><i class="fa-solid fa-envelope mr-1"></i> ${escapeHTML(u.account_name)}</div>
+                        <div class="text-xs text-yellow-500/80 font-mono mt-1 pt-2 border-t border-white/5">找回口令: ${escapeHTML(u.recovery_code || '无')}</div>
+                        
+                        <button class="delete-user-btn absolute top-3 right-3 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all bg-black/60 p-2 rounded shadow-md" data-id="${u.id}" data-acc="${escapeHTML(u.account_name)}" title="封禁删除该用户及所有词汇"><i class="fa-solid fa-user-xmark pointer-events-none"></i></button>
+                    </div>
+                `).join('');
+
+                if (totalPages > 1) {
+                    document.getElementById('userManagerPagination').innerHTML = `
+                        <button class="prev-page-users px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentPageUsers === 1 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i></button>
+                        <span class="font-tactical text-gray-500 tracking-widest text-sm mt-1">PAGE ${currentPageUsers}/${totalPages}</span>
+                        <button class="next-page-users px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentPageUsers === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
+                    `;
+                } else { document.getElementById('userManagerPagination').innerHTML = ''; }
+            }
+
             function updateSharedUI() {
                 const allFavIds = favoriteGroups.flatMap(g => g.items).filter(i => i.id).map(i => i.id);
                 const allFavText = favoriteGroups.flatMap(g => g.items).filter(i => !i.id).map(i => i.text); 
@@ -1035,7 +1194,6 @@
                     const isDuplicate = favoriteGroups[idx].items.some(i => (itemData.id && i.id === itemData.id));
                     if (!isDuplicate) { 
                         favoriteGroups[idx].items.unshift(itemData); 
-                        // 【新挂载】拖拽添加如果来自于大厅，同样 +1 云端收藏
                         if (itemData.id && supabaseClient) {
                             const dbItem = sharedItems.find(i => i.id === itemData.id);
                             if (dbItem) {
@@ -1143,7 +1301,11 @@
                     const newId = String(Math.floor(1000+Math.random()*9000)); const userName = currentUser.nickname || '未知用户';
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
-                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: isAdminLoggedIn }]).then(({error}) => {
+                    
+                    // 【权限判断核心】管理员和免审白名单用户，自动过审
+                    const autoApprove = (isAdminLoggedIn || isWhitelistedPublisher);
+                    
+                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: autoApprove }]).then(({error}) => {
                         if (error) {
                             alert('发布失败:' + error.message); syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`;
                         } else { 
@@ -1152,6 +1314,8 @@
                             const btn = t.closest('.publish-item-btn'); const icon = btn.querySelector('i');
                             icon.className = 'fa-solid fa-check text-green-400 pointer-events-none text-xs w-3 text-center'; setTimeout(() => icon.className = 'fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center', 1500);
                             document.getElementById('sortSelector').value = 'time'; currentPageShared = 1; fetchCloudData(); 
+                            
+                            if (!autoApprove) alert("发布成功！词汇已进入待审核队列，通过后将展示在大厅。");
                         }
                     }); return;
                 }
@@ -1187,13 +1351,20 @@
                     const text = promptArea.value.trim(); if (!text) return;
                     const name = prompt('为共享起个名字 (最长20字符)：'); if (!name) return; if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
                     const newId = String(Math.floor(1000+Math.random()*9000)); const userName = currentUser.nickname || '未知用户';
+                    
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
-                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: isAdminLoggedIn }]).then(({error}) => {
+                    
+                    // 【权限判断核心】管理员和免审白名单用户，自动过审
+                    const autoApprove = (isAdminLoggedIn || isWhitelistedPublisher);
+                    
+                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: autoApprove }]).then(({error}) => {
                         if (error) { alert('发布失败:' + error.message); syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`; } 
                         else { 
                             syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">共享成功</span>`;
                             setTimeout(() => { syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`; }, 3000);
                             document.getElementById('sortSelector').value = 'time'; currentPageShared=1; fetchCloudData(); 
+                            
+                            if (!autoApprove) alert("发布成功！词汇已进入待审核队列，通过后将展示在大厅。");
                         }
                     }); return;
                 }
@@ -1208,7 +1379,6 @@
                     const idx = parseInt(t.closest('.fav-tab').dataset.index);
                     if (favoriteGroups[idx].id === 'group_default') return;
                     if (confirm('彻底删除此标签及词条？')) {
-                        // 【修复】删除收藏夹时，同步减少组内所有云端词汇的 favs 计数
                         const groupToDelete = favoriteGroups[idx];
                         if (supabaseClient && groupToDelete.items && groupToDelete.items.length > 0) {
                             groupToDelete.items.forEach(item => {
@@ -1222,7 +1392,6 @@
                             });
                         }
                         favoriteGroups.splice(idx, 1);
-                        // 【修复】删除后修正 activeGroupIndex，防止越界或指向错误标签
                         if (activeGroupIndex >= favoriteGroups.length) {
                             activeGroupIndex = favoriteGroups.length - 1;
                         } else if (idx < activeGroupIndex) {
@@ -1244,12 +1413,15 @@
                 if (t.closest('.next-page-myshares')) { currentPageMyShares++; renderMyShares(); return; }
                 if (t.closest('.prev-page-admin')) { currentPageAdmin--; renderAdminPanel(); return; }
                 if (t.closest('.next-page-admin')) { currentPageAdmin++; renderAdminPanel(); return; }
+                
+                if (t.closest('.prev-page-users')) { currentPageUsers--; renderUserManager(); return; }
+                if (t.closest('.next-page-users')) { currentPageUsers++; renderUserManager(); return; }
+                
                 if (t.closest('#mySelectAllBtn')) { document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = true); return; }
                 if (t.closest('#myInverseSelectBtn')) { document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = !cb.checked); return; }
                 if (t.closest('#adminSelectAllBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = true); return; }
                 if (t.closest('#adminInverseSelectBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = !cb.checked); return; }
 
-                // 删除本地收藏夹卡片 (同步 -1 收藏量)
                 if (t.closest('.delete-item-btn')) {
                     const itemEl = t.closest('.prompt-item');
                     const uid = itemEl.dataset.uid; 
@@ -1268,7 +1440,6 @@
                     return;
                 }
 
-                // 【新增】管理员审核通过
                 if (t.closest('.approve-admin-btn')) {
                     if (!supabaseClient) return; 
                     const tr = t.closest('.admin-card'); 
@@ -1295,17 +1466,66 @@
                     } return;
                 }
                 
+                if (t.closest('.delete-user-btn')) {
+                    const btn = t.closest('.delete-user-btn');
+                    const id = btn.dataset.id;
+                    const acc = btn.dataset.acc;
+                    if (acc === ROOT_ADMIN) { alert("非法操作：无法删除 Root 账户！"); return; }
+                    
+                    if (confirm(`⚠️ 极度危险操作：确定要彻底删除用户【${acc}】吗？\n这将会连带清空该用户发布过的所有共享词汇、云端收藏夹记录！`)) {
+                        if(!supabaseClient) return;
+                        const originalHtml = btn.innerHTML;
+                        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
+                        btn.disabled = true;
+                        
+                        supabaseClient.from('shared_prompts').delete().eq('authorId', id).then(() => {
+                            supabaseClient.from('user_favorites').delete().eq('user_id', id).then(() => {
+                                supabaseClient.from('app_users').delete().eq('id', id).then(({error}) => {
+                                    if(!error) {
+                                        alert(`已将违规用户 ${acc} 彻底从云端抹除。`);
+                                        fetchAllUsers();
+                                        fetchCloudData(); 
+                                    } else {
+                                        alert("删除失败: " + error.message);
+                                        btn.innerHTML = originalHtml;
+                                        btn.disabled = false;
+                                    }
+                                });
+                            });
+                        });
+                    }
+                    return;
+                }
+
+                // 添加子管理员
                 if (t.closest('#addSubAdminBtn') && supabaseClient) {
                     const acc = document.getElementById('newSubAdminAccount').value.trim(); if (!acc || acc === ROOT_ADMIN || subAdmins.includes(acc)) return;
                     supabaseClient.from('admin_whitelist').insert([{ account_name: acc }]).then(({error}) => {
-                        if(!error) { subAdmins.push(acc); document.getElementById('newSubAdminAccount').value = ''; renderSubAdmins(); alert('管理员添加成功'); } else { alert('添加失败: ' + error.message); }
+                        if(!error) { document.getElementById('newSubAdminAccount').value = ''; alert('管理员添加成功，即将实时生效'); } else { alert('添加失败: ' + error.message); }
                     }); return;
                 }
                 
+                // 删除子管理员
                 if (t.closest('.delete-subadmin-btn') && supabaseClient) {
                     const acc = t.closest('.delete-subadmin-btn').dataset.account;
                     if(confirm(`确定要移除管理员身份: ${acc}?`)) {
-                        supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then(({error}) => { if(!error) { subAdmins = subAdmins.filter(e => e !== acc); renderSubAdmins(); } });
+                        supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then(({error}) => {});
+                    } return;
+                }
+
+                // 【新增】添加免审发布者
+                if (t.closest('#addPublisherBtn') && supabaseClient) {
+                    const acc = document.getElementById('newPublisherAccount').value.trim(); if (!acc || publisherWhitelist.includes(acc)) return;
+                    supabaseClient.from('publisher_whitelist').insert([{ account_name: acc }]).then(({error}) => {
+                        if(!error) { document.getElementById('newPublisherAccount').value = ''; alert('免审白名单添加成功，即将实时生效'); } else { alert('添加失败: ' + error.message); }
+                    }); return;
+                }
+
+                // 【新增】删除免审发布者
+                if (t.closest('.delete-publisher-btn') && supabaseClient) {
+                    const acc = t.closest('.delete-publisher-btn').dataset.account;
+                    if(confirm(`确定要移除该用户的免审发布特权: ${acc}?`)) {
+                        supabaseClient.from('publisher_whitelist').delete().eq('account_name', acc).then(({error}) => {});
                     } return;
                 }
 
@@ -1314,7 +1534,6 @@
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
                     if(confirm(`删除 ${ids.length} 个词汇？`)) {
                         supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => {
-                            // 【修复】同步从所有本地收藏夹中移除已删除的云端词汇
                             const idSet = new Set(ids);
                             let changed = false;
                             favoriteGroups.forEach(g => {
@@ -1334,7 +1553,6 @@
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
                     if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) {
                         supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => {
-                            // 【修复】同步从所有本地收藏夹中移除已删除的云端词汇
                             const idSet = new Set(ids);
                             let changed = false;
                             favoriteGroups.forEach(g => {
@@ -1421,10 +1639,23 @@
             const sSearch = document.getElementById('sharedSearchInput');
             if(sSearch) sSearch.oninput = (e) => { sharedSearchQuery = e.target.value.toLowerCase(); currentPageShared=1; renderSharedGrid(); };
             
+            const uSearch = document.getElementById('userSearchInput');
+            if(uSearch) uSearch.oninput = (e) => { userSearchQuery = e.target.value.toLowerCase(); currentPageUsers=1; renderUserManager(); };
+
             const sSort = document.getElementById('sortSelector');
             if(sSort) sSort.onchange = () => { currentPageShared=1; renderSharedGrid(); };
+            
             const aSort = document.getElementById('adminSortSelector');
             if(aSort) aSort.onchange = () => { currentPageAdmin=1; renderAdminPanel(); };
+
+            const aStatus = document.getElementById('adminStatusSelector');
+            if(aStatus) aStatus.onchange = (e) => { 
+                currentPageAdmin=1; 
+                if(e.target.value === 'pending') e.target.className = "bg-transparent border border-white/10 rounded px-3 py-2 text-red-400 font-tactical outline-none cursor-pointer hover:text-white transition-colors mr-2";
+                else if(e.target.value === 'approved') e.target.className = "bg-transparent border border-white/10 rounded px-3 py-2 text-green-400 font-tactical outline-none cursor-pointer hover:text-white transition-colors mr-2";
+                else e.target.className = "bg-transparent border border-white/10 rounded px-3 py-2 text-gray-300 font-tactical outline-none cursor-pointer hover:text-white transition-colors mr-2";
+                renderAdminPanel(); 
+            };
 
         });
     </script>
