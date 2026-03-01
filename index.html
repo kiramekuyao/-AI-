@@ -129,7 +129,7 @@
                     <div class="flex items-center justify-between border-b border-white/10 pb-4">
                         <div class="flex items-center gap-5 pt-1 shrink-0">
                             <h3 id="tabFavorites" class="cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all">
-                                <i class="fa-solid fa-box-archive"></i> 收藏夹
+                                <i class="fa-solid fa-box-archive"></i> 云端收藏夹
                             </h3>
                             <h3 id="tabMyShares" class="cursor-pointer font-tactical text-2xl text-gray-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all">
                                 <i class="fa-solid fa-share-nodes"></i> 共享管理
@@ -367,13 +367,11 @@
             if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch(e) { console.error("Supabase 初始化失败"); }
 
-        // Root Admin 账户名
         const ROOT_ADMIN = '893107072@qq.com'; 
         let subAdmins = [];
         let isRootAdmin = false;
         let isAdminLoggedIn = false;
         
-        // 全局用户对象 { id, account_name, nickname }
         let currentUser = null; 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -416,7 +414,7 @@
             let favSearchQuery = '', sharedSearchQuery = '';
             let history = []; 
 
-            let favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
+            let favoriteGroups = []; // 初始化为空，强制依托云端
             let sharedItems = [];
 
             promptArea.addEventListener('input', () => {
@@ -434,16 +432,13 @@
                     if (error) throw error;
                     sharedItems = data || [];
 
-                    // ================= 底层数据实时深层同步 =================
                     let needsSave = false;
                     if (favoriteGroups && favoriteGroups.length > 0) {
                         favoriteGroups.forEach(group => {
                             group.items.forEach(item => {
                                 if (item.id) {
-                                    // 在云端寻找对应ID的共享词条
                                     const cloudItem = sharedItems.find(i => i.id === item.id);
                                     if (cloudItem) {
-                                        // 如果云端的内容或名称被修改了，自动强制覆盖本地存储的数据
                                         if (item.name !== cloudItem.name || item.text !== cloudItem.text) {
                                             item.name = cloudItem.name;
                                             item.text = cloudItem.text;
@@ -454,14 +449,15 @@
                             });
                         });
                     }
-                    // 如果发生了底层数据覆盖，静默保存一次至用户的云端收藏数据库
                     if (needsSave && currentUser) {
+                        // 【修复】追加了 .then() 触发请求
                         supabaseClient.from('user_favorites').upsert({
                             user_id: currentUser.id,
                             fav_data: JSON.stringify(favoriteGroups)
-                        }, { onConflict: 'user_id' });
+                        }, { onConflict: 'user_id' }).then(({error}) => {
+                            if(error) console.error("静默云端同步失败", error);
+                        });
                     }
-                    // ==========================================================
 
                 } catch (err) {
                     console.error("数据拉取失败:", err);
@@ -484,16 +480,16 @@
                     if (data && data.fav_data) {
                         favoriteGroups = typeof data.fav_data === 'string' ? JSON.parse(data.fav_data) : data.fav_data;
                         if (favoriteGroups.length === 0) favoriteGroups.push({ id: 'group_default', name: '默认收藏', items: [], isDefault: true });
-                        
                         favoriteGroups.forEach(g => { 
                             if (!g.items) g.items = []; 
-                            g.items.forEach(item => {
-                                if (!item._uid) item._uid = 'uid_' + Math.random().toString(36).substr(2, 9);
-                            });
+                            g.items.forEach(item => { if (!item._uid) item._uid = 'uid_' + Math.random().toString(36).substr(2, 9); });
                         });
+                    } else {
+                        // 新用户云端首次初始化
+                        favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
                     }
                 } catch (err) {
-                    console.error("拉取收藏状态", err); 
+                    favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
                 } finally {
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">云端已连接</span>`;
                     renderGroups();
@@ -509,19 +505,15 @@
                     await fetchUserFavorites(user);
                     await fetchCloudData();
                 } else {
-                    favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
+                    // 【重构核心】未登录状态下彻底清空本地虚假内存
+                    favoriteGroups = [];
                     renderGroups();
                     await fetchCloudData();
                 }
             }
 
-            // 检查本地存储中的登录态
             const localSession = localStorage.getItem('yaoai_user');
-            if (localSession) {
-                initApp(JSON.parse(localSession));
-            } else {
-                initApp(null);
-            }
+            if (localSession) { initApp(JSON.parse(localSession)); } else { initApp(null); }
 
             async function updateLoginUI(u) { 
                 const loginBtn = document.getElementById('loginBtn');
@@ -534,10 +526,9 @@
 
                     if(supabaseClient) {
                         try {
-                            // 改为查询 account_name
                             const { data } = await supabaseClient.from('admin_whitelist').select('account_name');
                             subAdmins = data ? data.map(i => i.account_name) : [];
-                        } catch(e) { console.error("获取白名单失败", e); }
+                        } catch(e) {}
                     }
                     isRootAdmin = (u.account_name === ROOT_ADMIN);
                     isAdminLoggedIn = isRootAdmin || subAdmins.includes(u.account_name);
@@ -570,16 +561,14 @@
                 if (render) renderGroups();
                 updateSharedUI();
                 
-                if (!supabaseClient || !currentUser) {
-                    if(render) alert("请先登录账号，收藏夹才能保存到云端。");
-                    return;
-                }
+                if (!supabaseClient || !currentUser) return;
                 try {
+                    // 【修复】追加了 .then()
                     await supabaseClient.from('user_favorites').upsert({
                         user_id: currentUser.id,
                         fav_data: JSON.stringify(favoriteGroups)
-                    }, { onConflict: 'user_id' });
-                } catch(e) { console.error("云端保存失败", e); }
+                    }, { onConflict: 'user_id' }).then();
+                } catch(e) {}
             }
 
             // === 认证系统逻辑 ===
@@ -601,118 +590,71 @@
 
             authTabs.forEach(tab => {
                 tab.addEventListener('click', () => {
-                    authTabs.forEach(t => {
-                        t.classList.remove('text-[#3b82f6]', 'border-[#3b82f6]');
-                        t.classList.add('text-gray-500', 'border-transparent');
-                    });
-                    tab.classList.remove('text-gray-500', 'border-transparent');
-                    tab.classList.add('text-[#3b82f6]', 'border-[#3b82f6]');
-
-                    authPanels.forEach(p => p.classList.add('hidden'));
-                    document.getElementById(tab.dataset.target).classList.remove('hidden');
+                    authTabs.forEach(t => { t.classList.remove('text-[#3b82f6]', 'border-[#3b82f6]'); t.classList.add('text-gray-500', 'border-transparent'); });
+                    tab.classList.remove('text-gray-500', 'border-transparent'); tab.classList.add('text-[#3b82f6]', 'border-[#3b82f6]');
+                    authPanels.forEach(p => p.classList.add('hidden')); document.getElementById(tab.dataset.target).classList.remove('hidden');
                 });
             });
 
-            document.getElementById('loginBtn').addEventListener('click', () => {
-                if(!currentUser) {
-                    authModal.classList.remove('hidden');
-                }
-            });
+            document.getElementById('loginBtn').addEventListener('click', () => { if(!currentUser) authModal.classList.remove('hidden'); });
             document.getElementById('logoutBtn').addEventListener('click', () => {
-                if(confirm("确定要登出当前账户吗？")) {
-                    localStorage.removeItem('yaoai_user');
-                    initApp(null);
-                }
+                if(confirm("确定要登出当前账户吗？")) { localStorage.removeItem('yaoai_user'); initApp(null); }
             });
             document.getElementById('closeAuthBtn').addEventListener('click', () => authModal.classList.add('hidden'));
 
             // 登入
             document.getElementById('submitLogin').addEventListener('click', async () => {
                 if(!supabaseClient) return alert("数据库尚未连接");
-                const acc = document.getElementById('login_account').value.trim();
-                const pwd = document.getElementById('login_pwd').value;
+                const acc = document.getElementById('login_account').value.trim(); const pwd = document.getElementById('login_pwd').value;
                 if(!acc || !pwd) return alert("请输入账户名和密码");
-
                 showAuthLoading('正在验证账户...');
                 try {
                     const { data, error } = await supabaseClient.from('app_users').select('*').eq('account_name', acc).eq('pwd', pwd).single();
                     if(error || !data) throw new Error("账户名或密码错误");
-                    
                     const userObj = { id: data.id, account_name: data.account_name, nickname: data.nickname };
                     localStorage.setItem('yaoai_user', JSON.stringify(userObj));
-                    authModal.classList.add('hidden');
-                    initApp(userObj);
-                } catch(e) {
-                    alert(e.message);
-                } finally { hideAuthLoading(); }
+                    authModal.classList.add('hidden'); initApp(userObj);
+                } catch(e) { alert(e.message); } finally { hideAuthLoading(); }
             });
 
             // 注册
             document.getElementById('submitReg').addEventListener('click', async () => {
                 if(!supabaseClient) return alert("数据库尚未连接");
-                const acc = document.getElementById('reg_account').value.trim();
-                const nick = document.getElementById('reg_nickname').value.trim();
-                const pwd = document.getElementById('reg_pwd').value;
-                const rec = document.getElementById('reg_recovery').value.trim();
-
+                const acc = document.getElementById('reg_account').value.trim(); const nick = document.getElementById('reg_nickname').value.trim();
+                const pwd = document.getElementById('reg_pwd').value; const rec = document.getElementById('reg_recovery').value.trim();
                 if(!acc || !nick || !pwd || !rec) return alert("所有字段均不能为空");
                 if(acc.length < 3 || nick.length < 2) return alert("账户名或昵称过短");
-
                 showAuthLoading('正在注册并分配权限...');
                 try {
                     const { data: existAcc } = await supabaseClient.from('app_users').select('id').eq('account_name', acc);
                     if(existAcc && existAcc.length > 0) throw new Error("该账户名已被注册");
-                    
                     const { data: existNick } = await supabaseClient.from('app_users').select('id').eq('nickname', nick);
                     if(existNick && existNick.length > 0) throw new Error("该昵称已被使用");
-
-                    const { data, error } = await supabaseClient.from('app_users').insert([{
-                        account_name: acc, nickname: nick, pwd: pwd, recovery_code: rec
-                    }]).select().single();
-
+                    const { data, error } = await supabaseClient.from('app_users').insert([{ account_name: acc, nickname: nick, pwd: pwd, recovery_code: rec }]).select().single();
                     if(error) throw error;
-                    
                     alert("注册成功！即将自动登入...");
                     const userObj = { id: data.id, account_name: data.account_name, nickname: data.nickname };
                     localStorage.setItem('yaoai_user', JSON.stringify(userObj));
-                    authModal.classList.add('hidden');
-                    initApp(userObj);
-                } catch(e) {
-                    alert(e.message);
-                } finally { hideAuthLoading(); }
+                    authModal.classList.add('hidden'); initApp(userObj);
+                } catch(e) { alert(e.message); } finally { hideAuthLoading(); }
             });
 
             // 找回/修改密码
             document.getElementById('submitRec').addEventListener('click', async () => {
                 if(!supabaseClient) return alert("数据库尚未连接");
-                const acc = document.getElementById('rec_account').value.trim();
-                const key = document.getElementById('rec_key').value;
-                const newPwd = document.getElementById('rec_new_pwd').value;
-
+                const acc = document.getElementById('rec_account').value.trim(); const key = document.getElementById('rec_key').value; const newPwd = document.getElementById('rec_new_pwd').value;
                 if(!acc || !key || !newPwd) return alert("请填写完整信息");
-
                 showAuthLoading('验证安全口令中...');
                 try {
                     const { data, error } = await supabaseClient.from('app_users').select('*').eq('account_name', acc).single();
                     if(error || !data) throw new Error("未找到该账户");
-
-                    if(data.recovery_code !== key && data.pwd !== key) {
-                        throw new Error("找回码或旧密码错误");
-                    }
-
+                    if(data.recovery_code !== key && data.pwd !== key) throw new Error("找回码或旧密码错误");
                     const { error: updError } = await supabaseClient.from('app_users').update({ pwd: newPwd }).eq('id', data.id);
                     if(updError) throw updError;
-
                     alert("密码修改成功！请使用新密码重新登录。");
-                    document.getElementById('login_account').value = acc;
-                    document.querySelector('.auth-tab[data-target="loginPanel"]').click();
-                    
-                    if(currentUser && currentUser.account_name === acc) {
-                        localStorage.removeItem('yaoai_user'); initApp(null);
-                    }
-                } catch(e) {
-                    alert(e.message);
-                } finally { hideAuthLoading(); }
+                    document.getElementById('login_account').value = acc; document.querySelector('.auth-tab[data-target="loginPanel"]').click();
+                    if(currentUser && currentUser.account_name === acc) { localStorage.removeItem('yaoai_user'); initApp(null); }
+                } catch(e) { alert(e.message); } finally { hideAuthLoading(); }
             });
             // ======================================
 
@@ -722,21 +664,15 @@
                 document.getElementById('tabAdmin').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
                 if(isAdminLoggedIn) document.getElementById('tabAdmin').classList.remove('hidden');
                 
-                groupsContainer.classList.add('hidden'); 
-                mySharesContainer.classList.add('hidden');
-                adminContainer.classList.add('hidden'); 
-                document.getElementById('addGroupBtn').classList.add('hidden');
-                
-                publicHallContainer.classList.add('hidden');
+                groupsContainer.classList.add('hidden'); mySharesContainer.classList.add('hidden'); adminContainer.classList.add('hidden'); 
+                document.getElementById('addGroupBtn').classList.add('hidden'); publicHallContainer.classList.add('hidden');
             }
 
             document.getElementById('tabFavorites').onclick = () => {
                 resetTabs();
                 document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all";
-                groupsContainer.classList.remove('hidden'); 
-                document.getElementById('addGroupBtn').classList.remove('hidden');
-                publicHallContainer.classList.remove('hidden');
-                favSearchInput.placeholder = '检索收藏夹档案...'; favSearchQuery = favSearchInput.value.toLowerCase(); currentPageFav = 1; renderGroups();
+                groupsContainer.classList.remove('hidden'); if(currentUser) document.getElementById('addGroupBtn').classList.remove('hidden');
+                publicHallContainer.classList.remove('hidden'); favSearchInput.placeholder = '检索收藏夹档案...'; favSearchQuery = favSearchInput.value.toLowerCase(); currentPageFav = 1; renderGroups();
             };
 
             document.getElementById('tabMyShares').onclick = () => {
@@ -747,16 +683,31 @@
             };
 
             document.getElementById('tabAdmin').onclick = () => {
-                if(!isAdminLoggedIn) return;
-                resetTabs();
+                if(!isAdminLoggedIn) return; resetTabs();
                 document.getElementById('tabAdmin').className = "cursor-pointer font-tactical text-2xl text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-red-400 pb-1 transition-all";
                 adminContainer.classList.remove('hidden'); adminContainer.classList.add('flex');
                 favSearchInput.placeholder = 'ROOT管理全局检索 (支持搜索名称/ID/内容)...'; favSearchQuery = favSearchInput.value.toLowerCase(); currentPageAdmin = 1; renderAdminPanel();
             };
 
             function renderGroups() {
+                // 【重构核心】未登录强制拦截，完全抛弃本地化
+                if (!currentUser) {
+                    groupsContainer.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-white/10 border-dashed rounded-lg shadow-inner">
+                            <i class="fa-solid fa-cloud-bolt text-[#ffc107] text-5xl mb-4 drop-shadow-[0_0_15px_rgba(255,193,7,0.5)]"></i>
+                            <h2 class="text-white font-tactical text-2xl tracking-widest mb-2">云端收藏夹未开启</h2>
+                            <p class="text-gray-500 text-sm mb-6">所有的专属指令都将加密存储于你的云端账号数据库中。</p>
+                            <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-colors">立即登录</button>
+                        </div>
+                    `;
+                    document.getElementById('addGroupBtn').classList.add('hidden');
+                    return;
+                }
+                
+                document.getElementById('addGroupBtn').classList.remove('hidden');
                 if (favoriteGroups.length === 0) return;
                 if (activeGroupIndex >= favoriteGroups.length) activeGroupIndex = 0;
+                
                 const tabsHtml = favoriteGroups.map((g, i) => {
                     const isActive = (i === activeGroupIndex);
                     const delBtn = (g.id !== 'group_default') ? '<button class="delete-group-btn text-gray-500 hover:text-red-500 pointer-events-auto"><i class="fa-solid fa-xmark"></i></button>' : '';
@@ -801,41 +752,21 @@
             function createLocalItemHTML(item) {
                 const hasId = item.id && item.id !== '';
                 let displayItem = item;
+                if (hasId) { const cloudItem = sharedItems.find(i => i.id === item.id); if (cloudItem) displayItem = { ...item, ...cloudItem }; }
 
                 if (hasId) {
-                    const cloudItem = sharedItems.find(i => i.id === item.id);
-                    if (cloudItem) {
-                        displayItem = { ...item, ...cloudItem };
-                    }
-                }
-
-                if (hasId) {
-                    // 云端共享大厅词汇模板 (去除修改按钮，增加云端同步)
                     return `
                         <div class="prompt-item group hover:border-[#ffc107] relative is-fav" data-uid="${item._uid}" data-id="${item.id}" data-name="${escapeHTML(displayItem.name || '')}" data-text="${escapeHTML(displayItem.text || '')}">
-                            
                             <div class="id-badge flex items-center">
                                 <span>#${item.id}</span>
-                                <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(displayItem.authorName || '未知用户')}">
-                                    <i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(displayItem.authorName || '未知用户')}
-                                </span>
+                                <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(displayItem.authorName || '未知')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(displayItem.authorName || '未知')}</span>
                             </div>
-                            
                             <div class="prompt-content group-hover:pr-[60px] transition-all">${escapeHTML(displayItem.name || '')}</div>
-                            
                             <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${displayItem.favs || 0}</span></div>
-                            
-                            <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">
-                                USE: <span class="usage-count-text">${displayItem.usage || 0}</span>
-                            </div>
-                            
+                            <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${displayItem.usage || 0}</span></div>
                             <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                                <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容">
-                                    <i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i>
-                                </button>
-                                <button class="delete-item-btn text-gray-400 hover:text-red-500 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="无感移除该词条">
-                                    <i class="fa-solid fa-trash-can pointer-events-none text-xs w-3 text-center"></i>
-                                </button>
+                                <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容"><i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i></button>
+                                <button class="delete-item-btn text-gray-400 hover:text-red-500 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="无感移除该词条"><i class="fa-solid fa-trash-can pointer-events-none text-xs w-3 text-center"></i></button>
                             </div>
                         </div>
                     `;
@@ -843,20 +774,11 @@
                     return `
                         <div class="prompt-item group hover:border-[#ffc107] relative" data-uid="${item._uid}" data-id="" data-name="${escapeHTML(item.name || '')}" data-text="${escapeHTML(item.text || '')}">
                             <div class="prompt-content group-hover:pr-[110px] transition-all">${escapeHTML(item.name || '')}</div>
-                            
                             <div class="absolute top-1.5 right-[10px] flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                                <button class="publish-item-btn text-gray-400 hover:text-blue-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="一键发布到全网大厅">
-                                    <i class="fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center"></i>
-                                </button>
-                                <button class="copy-item-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容">
-                                    <i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i>
-                                </button>
-                                <button class="edit-item-btn text-gray-400 hover:text-[#ffc107] bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="修改名称">
-                                    <i class="fa-solid fa-pen pointer-events-none text-xs w-3 text-center"></i>
-                                </button>
-                                <button class="delete-item-btn text-gray-400 hover:text-red-500 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="无感删除词条">
-                                    <i class="fa-solid fa-trash-can pointer-events-none text-xs w-3 text-center"></i>
-                                </button>
+                                <button class="publish-item-btn text-gray-400 hover:text-blue-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="一键发布到全网大厅"><i class="fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center"></i></button>
+                                <button class="copy-item-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容"><i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i></button>
+                                <button class="edit-item-btn text-gray-400 hover:text-[#ffc107] bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="修改名称"><i class="fa-solid fa-pen pointer-events-none text-xs w-3 text-center"></i></button>
+                                <button class="delete-item-btn text-gray-400 hover:text-red-500 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="无感删除词条"><i class="fa-solid fa-trash-can pointer-events-none text-xs w-3 text-center"></i></button>
                             </div>
                         </div>
                     `;
@@ -870,7 +792,7 @@
                 new Sortable(zone, {
                     group: 'favorites', 
                     animation: 150, 
-                    delay: 100,
+                    delay: 50, // 【修复】拖拽防误触降低为50毫秒
                     delayOnTouchOnly: false, 
                     ghostClass: 'sortable-ghost',
                     filter: '.empty-placeholder, .pagination-controls, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
@@ -878,24 +800,12 @@
                     onEnd: () => { globalDraggedItem = null; },
                     onAdd: function(evt) {
                         const itemEl = evt.item;
-                        const itemData = { 
-                            _uid: 'uid_' + Math.random().toString(36).substr(2, 9), 
-                            id: itemEl.dataset.id || '', 
-                            name: itemEl.dataset.name, 
-                            text: itemEl.dataset.text 
-                        };
+                        const itemData = { _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: itemEl.dataset.id || '', name: itemEl.dataset.name, text: itemEl.dataset.text };
                         const targetG = favoriteGroups[activeGroupIndex];
-                        
                         const isDuplicate = targetG.items.some(i => (itemData.id && i.id === itemData.id));
-
                         setTimeout(() => {
                             itemEl.remove(); 
-                            if (!isDuplicate) {
-                                targetG.items.splice(evt.newIndex, 0, itemData);
-                                saveCloudAndSync(true); 
-                            } else {
-                                renderGroups(); 
-                            }
+                            if (!isDuplicate) { targetG.items.splice(evt.newIndex, 0, itemData); saveCloudAndSync(true); } else { renderGroups(); }
                         }, 10);
                     },
                     onUpdate: () => {
@@ -915,7 +825,6 @@
                 items.sort((a,b) => {
                     if (a.is_pinned && !b.is_pinned) return -1;
                     if (!a.is_pinned && b.is_pinned) return 1;
-
                     if(sortBy === 'favs') return parseInt(b.favs||0) - parseInt(a.favs||0);
                     if(sortBy === 'usage') return parseInt(b.usage||0) - parseInt(a.usage||0);
                     return parseInt(b.time||0) - parseInt(a.time||0);
@@ -928,25 +837,15 @@
                 sharedGrid.innerHTML = slice.map(i => `
                     <div class="prompt-item group relative" data-id="${i.id}" data-name="${escapeHTML(i.name)}" data-text="${escapeHTML(i.text)}" data-favs="${i.favs}">
                         ${i.is_pinned ? `<div class="absolute top-1 right-2 text-yellow-400 text-xs z-0" title="全网置顶"><i class="fa-solid fa-thumbtack"></i></div>` : ''}
-                        
                         <div class="id-badge flex items-center">
                             <span>#${i.id}</span>
-                            <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(i.authorName || '未知用户')}">
-                                <i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(i.authorName || '未知用户')}
-                            </span>
+                            <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(i.authorName || '未知用户')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(i.authorName || '未知用户')}</span>
                         </div>
-                        
                         <div class="prompt-content group-hover:pr-[85px] transition-all">${escapeHTML(i.name)}</div>
                         <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${i.favs}</span></div>
-                        
-                        <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">
-                            USE: <span class="usage-count-text">${i.usage || 0}</span>
-                        </div>
-                        
+                        <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${i.usage || 0}</span></div>
                         <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-60 group-hover:opacity-100 transition-all z-10">
-                            <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制并增加使用量">
-                                <i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i>
-                            </button>
+                            <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制并增加使用量"><i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i></button>
                         </div>
                     </div>
                 `).join('');
@@ -965,7 +864,7 @@
                     new Sortable(sharedGrid, { 
                         group: { name:'favorites', pull:'clone', put:false }, 
                         sort:false, 
-                        delay: 100,
+                        delay: 50, // 【修复】拖拽防误触降低为50毫秒
                         delayOnTouchOnly: false,
                         filter: '.prev-page-shared, .next-page-shared, .copy-shared-btn',
                         onStart:(e) => { globalDraggedItem = e.item; }, 
@@ -978,37 +877,24 @@
             function renderMyShares() {
                 if (!currentUser) { 
                     document.getElementById('mySharesGrid').innerHTML = '<div class="col-span-full text-center py-10 opacity-30 italic font-tactical text-xl">请先登录账号以管理我的共享</div>'; 
-                    document.getElementById('mySharesPagination').innerHTML = '';
-                    return; 
+                    document.getElementById('mySharesPagination').innerHTML = ''; return; 
                 }
                 let my = sharedItems.filter(i => i.authorId === currentUser.id);
-                
-                if (favSearchQuery) {
-                    my = my.filter(i => 
-                        (i.name||'').toLowerCase().includes(favSearchQuery) || 
-                        (i.id||'').toLowerCase().includes(favSearchQuery.replace('#','')) ||
-                        (i.text||'').toLowerCase().includes(favSearchQuery)
-                    );
-                }
-
+                if (favSearchQuery) my = my.filter(i => (i.name||'').toLowerCase().includes(favSearchQuery) || (i.id||'').toLowerCase().includes(favSearchQuery.replace('#','')) || (i.text||'').toLowerCase().includes(favSearchQuery));
                 const totalPages = Math.ceil(my.length / ADMIN_ITEMS_PER_PAGE) || 1;
                 if (currentPageMyShares > totalPages) currentPageMyShares = totalPages;
                 const slice = my.slice((currentPageMyShares - 1) * ADMIN_ITEMS_PER_PAGE, currentPageMyShares * ADMIN_ITEMS_PER_PAGE);
 
                 document.getElementById('mySharesGrid').innerHTML = slice.map(i => `
                     <div class="prompt-item group relative flex flex-col items-start admin-card border-blue-500/30 hover:border-blue-400" data-id="${i.id}">
-                        <div class="absolute top-2.5 right-3 z-10" onclick="event.stopPropagation()">
-                            <input type="checkbox" class="myshare-cb accent-blue-500 w-4 h-4 cursor-pointer shadow-lg shadow-black">
-                        </div>
+                        <div class="absolute top-2.5 right-3 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="myshare-cb accent-blue-500 w-4 h-4 cursor-pointer shadow-lg shadow-black"></div>
                         <div class="w-full bg-[#0f1923] px-3 py-2 border-b border-white/10 flex justify-between items-center shrink-0">
                             <span class="font-mono text-cyan-400 text-sm tracking-widest">#${i.id}</span>
                             <span class="text-[10px] text-gray-500 mr-7 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${i.favs}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${i.usage}</span></span>
                         </div>
                         <div class="p-3 w-full flex-grow flex flex-col pointer-events-none">
-                            <h4 class="font-bold text-white text-sm mb-2 pr-6 truncate" title="${escapeHTML(i.name)}">${escapeHTML(i.name)}</h4>
-                            <div class="bg-[#0f1923]/50 border border-white/5 rounded p-2 text-xs text-gray-400 font-mono flex-grow relative overflow-hidden">
-                                <div class="line-clamp-3 leading-relaxed">${escapeHTML(i.text)}</div>
-                            </div>
+                            <h4 class="font-bold text-white text-sm mb-2 pr-6 truncate">${escapeHTML(i.name)}</h4>
+                            <div class="bg-[#0f1923]/50 border border-white/5 rounded p-2 text-xs text-gray-400 font-mono flex-grow relative overflow-hidden"><div class="line-clamp-3 leading-relaxed">${escapeHTML(i.text)}</div></div>
                         </div>
                     </div>
                 `).join('');
@@ -1019,20 +905,15 @@
                         <span class="font-tactical text-gray-500 text-sm mt-1 tracking-widest">PAGE ${currentPageMyShares}/${totalPages}</span>
                         <button class="next-page-myshares px-3 py-1 bg-white/5 hover:bg-white/10 rounded text-gray-400 disabled:opacity-20 transition-colors hover:text-white" ${currentPageMyShares === totalPages ? 'disabled' : ''}><i class="fa-solid fa-chevron-right"></i></button>
                     `;
-                } else {
-                    document.getElementById('mySharesPagination').innerHTML = '';
-                }
+                } else { document.getElementById('mySharesPagination').innerHTML = ''; }
             }
 
             function renderSubAdmins() {
-                const list = document.getElementById('subAdminList');
-                if(!list) return;
+                const list = document.getElementById('subAdminList'); if(!list) return;
                 list.innerHTML = subAdmins.map(acc => `
                     <div class="flex items-center gap-2 bg-purple-500/20 border border-purple-500/30 text-purple-200 px-3 py-1.5 rounded-full text-sm">
                         <i class="fa-solid fa-user-shield"></i> ${acc}
-                        <button class="delete-subadmin-btn text-purple-400 hover:text-red-400 ml-1 transition-colors" data-account="${acc}">
-                            <i class="fa-solid fa-xmark pointer-events-none"></i>
-                        </button>
+                        <button class="delete-subadmin-btn text-purple-400 hover:text-red-400 ml-1 transition-colors" data-account="${acc}"><i class="fa-solid fa-xmark pointer-events-none"></i></button>
                     </div>
                 `).join('');
             }
@@ -1068,16 +949,11 @@
                                 <span class="font-mono text-cyan-400 text-xs tracking-widest">#${i.id}</span>
                                 <span class="text-[10px] text-purple-400 border-l border-white/10 pl-2 truncate max-w-[80px]" title="发布者: ${escapeHTML(i.authorName || '未知用户')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(i.authorName || '未知')}</span>
                             </div>
-                            <span class="text-[10px] text-gray-500 flex gap-3">
-                                <span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${i.favs}</span>
-                                <span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${i.usage}</span>
-                            </span>
+                            <span class="text-[10px] text-gray-500 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${i.favs}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${i.usage}</span></span>
                         </div>
                         <div class="p-3 w-full flex-grow flex flex-col pointer-events-none">
                             <h4 class="font-bold text-white text-sm mb-2 pr-6 truncate">${escapeHTML(i.name)}</h4>
-                            <div class="bg-[#0f1923]/50 border border-white/5 rounded p-2 text-xs text-gray-400 font-mono flex-grow relative overflow-hidden">
-                                <div class="line-clamp-3 leading-relaxed">${escapeHTML(i.text)}</div>
-                            </div>
+                            <div class="bg-[#0f1923]/50 border border-white/5 rounded p-2 text-xs text-gray-400 font-mono flex-grow relative overflow-hidden"><div class="line-clamp-3 leading-relaxed">${escapeHTML(i.text)}</div></div>
                         </div>
                     </div>
                 `).join('');
@@ -1095,24 +971,19 @@
                 const allFavIds = favoriteGroups.flatMap(g => g.items).filter(i => i.id).map(i => i.id);
                 const allFavText = favoriteGroups.flatMap(g => g.items).filter(i => !i.id).map(i => i.text); 
                 
-                // 【修改】：扩大检索范围到所有卡片（包含收藏夹和大厅），彻底抛弃 +1 伪装算法
                 document.querySelectorAll('.prompt-item').forEach(el => {
                     const isSaved = (el.dataset.id && allFavIds.includes(el.dataset.id)) || (!el.dataset.id && allFavText.includes(el.dataset.text));
                     el.classList.toggle('is-fav', isSaved);
                     
                     const counter = el.querySelector('.fav-count-text');
                     if(counter && el.dataset.id) {
-                        // 强制从云端内存中读取最真实的收藏数
                         const dbItem = sharedItems.find(i => i.id === el.dataset.id);
-                        if (dbItem) counter.textContent = dbItem.favs;
+                        if (dbItem) counter.textContent = dbItem.favs || 0;
                     }
                 });
             }
             
-            function closeEditModal() {
-                editModal.classList.add('hidden');
-                currentEditItemId = null;
-            }
+            function closeEditModal() { editModal.classList.add('hidden'); currentEditItemId = null; }
             document.getElementById('closeEditModalBtn').onclick = closeEditModal;
             document.getElementById('cancelEditBtn').onclick = closeEditModal;
 
@@ -1121,13 +992,8 @@
                 if (tab && globalDraggedItem) {
                     const idx = parseInt(tab.dataset.index);
                     const itemData = { _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: globalDraggedItem.dataset.id||'', name: globalDraggedItem.dataset.name, text: globalDraggedItem.dataset.text };
-                    
                     const isDuplicate = favoriteGroups[idx].items.some(i => (itemData.id && i.id === itemData.id));
-                    
-                    if (!isDuplicate) {
-                        favoriteGroups[idx].items.unshift(itemData);
-                        activeGroupIndex = idx; currentPageFav = 1; saveCloudAndSync();
-                    }
+                    if (!isDuplicate) { favoriteGroups[idx].items.unshift(itemData); activeGroupIndex = idx; currentPageFav = 1; saveCloudAndSync(); }
                 }
                 document.querySelectorAll('.fav-tab').forEach(t => t.classList.remove('tab-drop-target'));
             });
@@ -1136,13 +1002,9 @@
                 if (!globalDraggedItem) return;
                 const tab = e.target.closest('.fav-tab');
                 if (tab) {
-                    e.preventDefault();
-                    tab.classList.add('tab-drop-target');
+                    e.preventDefault(); tab.classList.add('tab-drop-target');
                     clearTimeout(hoverExpandTimer);
-                    hoverExpandTimer = setTimeout(() => {
-                        activeGroupIndex = parseInt(tab.dataset.index);
-                        currentPageFav = 1; renderGroups();
-                    }, 500);
+                    hoverExpandTimer = setTimeout(() => { activeGroupIndex = parseInt(tab.dataset.index); currentPageFav = 1; renderGroups(); }, 500);
                 }
             });
             document.body.addEventListener('dragleave', (e) => {
@@ -1155,133 +1017,71 @@
                 
                 if (t.closest('.admin-card')) {
                     if (t.closest('input') || t.closest('button')) return;
-                    const card = t.closest('.admin-card');
-                    const id = card.dataset.id;
-                    const item = sharedItems.find(i => i.id === id);
+                    const card = t.closest('.admin-card'); const id = card.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
-                        currentEditItemId = id;
-                        editModalId.textContent = `#${id}`;
-                        editModalName.value = item.name || '';
-                        editModalText.value = item.text || '';
-                        editModal.classList.remove('hidden');
-                    }
-                    return;
+                        currentEditItemId = id; editModalId.textContent = `#${id}`; editModalName.value = item.name || ''; editModalText.value = item.text || ''; editModal.classList.remove('hidden');
+                    } return;
                 }
                 
                 if (t.id === 'saveEditBtn') {
                     if (!currentEditItemId || !supabaseClient) return;
-                    const newName = editModalName.value.trim();
-                    const newText = editModalText.value.trim();
+                    const newName = editModalName.value.trim(); const newText = editModalText.value.trim();
                     if (!newName || !newText) { alert("名称和内容不能为空！"); return; }
                     
                     const originalBtnContent = saveEditBtn.innerHTML;
-                    saveEditBtn.disabled = true;
-                    saveEditBtn.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin"></i> 同步更新中...`;
+                    saveEditBtn.disabled = true; saveEditBtn.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin"></i> 同步更新中...`;
 
-                    supabaseClient.from('shared_prompts').update({
-                        name: newName,
-                        text: newText
-                    }).eq('id', currentEditItemId).then(({error}) => {
-                        saveEditBtn.disabled = false;
-                        saveEditBtn.innerHTML = originalBtnContent;
-                        if (error) {
-                            alert('更新失败: ' + error.message);
-                        } else {
-                            closeEditModal();
-                            fetchCloudData();
-                        }
-                    });
-                    return;
+                    // 【修复】追加 .then() 以确保执行
+                    supabaseClient.from('shared_prompts').update({ name: newName, text: newText }).eq('id', currentEditItemId).then(({error}) => {
+                        saveEditBtn.disabled = false; saveEditBtn.innerHTML = originalBtnContent;
+                        if (error) alert('更新失败: ' + error.message); else { closeEditModal(); fetchCloudData(); }
+                    }); return;
                 }
 
                 if (t.closest('#exportJsonBtn')) {
                     const activeGroup = favoriteGroups[activeGroupIndex];
-                    if (!activeGroup || !activeGroup.items || activeGroup.items.length === 0) {
-                        alert('当前标签组为空，没有数据可导出！'); return;
-                    }
+                    if (!activeGroup || !activeGroup.items || activeGroup.items.length === 0) { alert('当前标签组为空，没有数据可导出！'); return; }
                     const exportData = [{ name: activeGroup.name, items: activeGroup.items.map(i => ({ name: i.name, text: i.text })) }];
-                    const dataStr = JSON.stringify(exportData, null, 2);
-                    const blob = new Blob([dataStr], { type: 'application/json' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = url;
-                    a.download = `YaoAI_${activeGroup.name}_${new Date().getTime()}.json`;
-                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-                    return;
+                    const dataStr = JSON.stringify(exportData, null, 2); const blob = new Blob([dataStr], { type: 'application/json' }); const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = url; a.download = `YaoAI_${activeGroup.name}_${new Date().getTime()}.json`;
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); return;
                 }
 
                 if (t.closest('#importJsonBtn')) {
-                    const input = document.createElement('input');
-                    input.type = 'file'; 
-                    input.accept = '.json, .txt';
+                    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json, .txt';
                     input.onchange = ev => {
-                        const file = ev.target.files[0];
-                        if (!file) return;
-                        const isTxt = file.name.endsWith('.txt');
-                        const reader = new FileReader();
-                        
+                        const file = ev.target.files[0]; if (!file) return; const isTxt = file.name.endsWith('.txt'); const reader = new FileReader();
                         reader.onload = event => {
                             const fileContent = event.target.result;
                             if (isTxt) {
-                                const blocks = fileContent.split(/------------------------------------------------------------/);
-                                const items = [];
-                                
+                                const blocks = fileContent.split(/------------------------------------------------------------/); const items = [];
                                 blocks.forEach(block => {
                                     const match = block.match(/##\s*\d+\.\s*([^\n]+)\r?\n([\s\S]+)/);
-                                    if (match) {
-                                        items.push({ 
-                                            _uid: 'uid_' + Math.random().toString(36).substr(2, 9),
-                                            id: '', 
-                                            name: match[1].trim().substring(0, 20), 
-                                            text: match[2].trim() 
-                                        });
-                                    }
+                                    if (match) items.push({ _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: '', name: match[1].trim().substring(0, 20), text: match[2].trim() });
                                 });
-                                
                                 if (items.length > 0) {
                                     const groupName = (file.name.replace('.txt', '') + ' (导入)').substring(0, 20);
-                                    favoriteGroups.push({
-                                        id: 'group_' + Date.now() + Math.floor(Math.random()*1000),
-                                        name: groupName,
-                                        items: items
-                                    });
-                                    activeGroupIndex = favoriteGroups.length - 1; 
-                                    currentPageFav = 1;
-                                    saveCloudAndSync(true); 
-                                    alert(`✅ 成功从 TXT 导入了 ${items.length} 个魔导书词条！`);
-                                } else {
-                                    alert('TXT解析失败：未在文件中找到符合 "## 数字. 标题" 这种格式的提示词。');
-                                }
+                                    favoriteGroups.push({ id: 'group_' + Date.now() + Math.floor(Math.random()*1000), name: groupName, items: items });
+                                    activeGroupIndex = favoriteGroups.length - 1; currentPageFav = 1; saveCloudAndSync(true); alert(`✅ 成功从 TXT 导入了 ${items.length} 个魔导书词条！`);
+                                } else alert('TXT解析失败：未在文件中找到符合格式的提示词。');
                             } else {
                                 try {
-                                    const data = JSON.parse(fileContent);
-                                    let importedGroups = Array.isArray(data) ? data : [data];
-                                    let importedCount = 0;
+                                    const data = JSON.parse(fileContent); let importedGroups = Array.isArray(data) ? data : [data]; let importedCount = 0;
                                     importedGroups.forEach(g => {
                                         const groupItems = g.items || g.keywords;
                                         if (g.name && Array.isArray(groupItems)) {
                                             favoriteGroups.push({
-                                                id: 'group_' + Date.now() + Math.floor(Math.random()*1000),
-                                                name: (g.name + ' (导入)').substring(0, 20),
-                                                items: groupItems.map(i => ({ 
-                                                    _uid: 'uid_' + Math.random().toString(36).substr(2, 9),
-                                                    id: i.id || '', 
-                                                    name: (i.name || i.label || '未命名').substring(0,20), 
-                                                    text: i.text || i.value || '' 
-                                                }))
-                                            });
-                                            importedCount++;
+                                                id: 'group_' + Date.now() + Math.floor(Math.random()*1000), name: (g.name + ' (导入)').substring(0, 20),
+                                                items: groupItems.map(i => ({ _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: i.id || '', name: (i.name || i.label || '未命名').substring(0,20), text: i.text || i.value || '' }))
+                                            }); importedCount++;
                                         }
                                     });
-                                    if (importedCount > 0) {
-                                        activeGroupIndex = favoriteGroups.length - 1; currentPageFav = 1;
-                                        saveCloudAndSync(true); alert(`✅ 成功导入了 ${importedCount} 个标签组！`);
-                                    }
+                                    if (importedCount > 0) { activeGroupIndex = favoriteGroups.length - 1; currentPageFav = 1; saveCloudAndSync(true); alert(`✅ 成功导入了 ${importedCount} 个标签组！`); }
                                 } catch (err) { alert("JSON 读取失败: " + err.message); }
                             }
                         };
                         reader.readAsText(file);
-                    };
-                    input.click(); return;
+                    }; input.click(); return;
                 }
 
                 if (t.closest('.publish-item-btn')) {
@@ -1289,74 +1089,45 @@
                     if(!supabaseClient) { alert("云端服务未连接"); return; }
                     if (!currentUser) { alert('请先登录账号才能发布共享！'); authModal.classList.remove('hidden'); return; }
 
-                    const itemEl = t.closest('.prompt-item');
-                    const text = itemEl.dataset.text;
-                    const name = itemEl.dataset.name;
-
-                    if (!text) return;
-                    
-                    const newId = String(Math.floor(1000+Math.random()*9000));
-                    const userName = currentUser.nickname || '未知用户';
+                    const itemEl = t.closest('.prompt-item'); const text = itemEl.dataset.text; const name = itemEl.dataset.name; if (!text) return;
+                    const newId = String(Math.floor(1000+Math.random()*9000)); const userName = currentUser.nickname || '未知用户';
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
-                    
-                    supabaseClient.from('shared_prompts').insert([{ 
-                        id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false 
-                    }]).then(({error}) => {
+                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false }]).then(({error}) => {
                         if (error) {
-                            alert('发布失败:' + error.message);
-                            syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`;
+                            alert('发布失败:' + error.message); syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`;
                         } else { 
                             syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">云端发布成功</span>`;
-                            setTimeout(() => {
-                                syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`;
-                            }, 3000);
-                            
-                            const btn = t.closest('.publish-item-btn');
-                            const icon = btn.querySelector('i');
-                            icon.className = 'fa-solid fa-check text-green-400 pointer-events-none text-xs w-3 text-center';
-                            setTimeout(() => icon.className = 'fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center', 1500);
-
-                            document.getElementById('sortSelector').value = 'time'; 
-                            currentPageShared = 1; 
-                            fetchCloudData(); 
+                            setTimeout(() => { syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`; }, 3000);
+                            const btn = t.closest('.publish-item-btn'); const icon = btn.querySelector('i');
+                            icon.className = 'fa-solid fa-check text-green-400 pointer-events-none text-xs w-3 text-center'; setTimeout(() => icon.className = 'fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center', 1500);
+                            document.getElementById('sortSelector').value = 'time'; currentPageShared = 1; fetchCloudData(); 
                         }
-                    });
-                    return;
+                    }); return;
                 }
 
-                // 复制指令：如果是共享词条（含ID），则同时增加云端 usage 使用量
+                // 复制并增加使用量
                 if (t.closest('.copy-item-btn') || t.closest('.copy-shared-btn')) {
                     e.stopPropagation();
-                    const btn = t.closest('button');
-                    const item = t.closest('.prompt-item');
-                    const text = item.dataset.text;
-                    
+                    const btn = t.closest('button'); const item = t.closest('.prompt-item'); const text = item.dataset.text;
                     navigator.clipboard.writeText(text);
-                    const icon = btn.querySelector('i');
-                    icon.className = 'fa-solid fa-check text-green-400 pointer-events-none text-xs w-3 text-center';
-                    setTimeout(() => icon.className = 'fa-solid fa-copy pointer-events-none text-xs w-3 text-center', 1500);
+                    const icon = btn.querySelector('i'); icon.className = 'fa-solid fa-check text-green-400 pointer-events-none text-xs w-3 text-center'; setTimeout(() => icon.className = 'fa-solid fa-copy pointer-events-none text-xs w-3 text-center', 1500);
 
                     if (t.closest('.copy-shared-btn') && supabaseClient) {
-                        const id = item.dataset.id;
-                        const dbItem = sharedItems.find(i => i.id === id);
+                        const id = item.dataset.id; const dbItem = sharedItems.find(i => i.id === id);
                         if (dbItem) {
                             dbItem.usage = (parseInt(dbItem.usage || 0) + 1).toString();
-                            const uEl = item.querySelector('.usage-count-text');
-                            if (uEl) uEl.textContent = dbItem.usage;
-                            supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id);
+                            const uEl = item.querySelector('.usage-count-text'); if (uEl) uEl.textContent = dbItem.usage;
+                            // 【修复】追加 .then() 强制执行更新
+                            supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id).then();
                         }
-                    }
-                    return;
+                    } return;
                 }
 
                 if (t.closest('#saveTerminalBtn')) {
-                    if(!currentUser) { alert('请先登录云端账号'); return; }
-                    const text = promptArea.value.trim();
-                    if (!text) { alert('终端目前为空！'); return; }
-                    let name = prompt('命名此指令 (最长20字符)：', '自定义指令');
-                    if (!name) return;
-                    if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
+                    if(!currentUser) { alert('云端环境强制：请先登录账号'); authModal.classList.remove('hidden'); return; }
+                    const text = promptArea.value.trim(); if (!text) { alert('终端目前为空！'); return; }
+                    let name = prompt('命名此指令 (最长20字符)：', '自定义指令'); if (!name) return; if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
                     const defIdx = favoriteGroups.findIndex(g => g.id === 'group_default');
                     favoriteGroups[defIdx].items.unshift({ _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: '', name: name, text: text });
                     activeGroupIndex = defIdx; currentPageFav = 1; saveCloudAndSync(); return;
@@ -1365,76 +1136,31 @@
                 if (t.closest('#shareTerminalBtn')) {
                     if(!supabaseClient) { alert("云端服务未连接"); return; }
                     if (!currentUser) { alert('请先登录'); authModal.classList.remove('hidden'); return; }
-                    const text = promptArea.value.trim();
-                    if (!text) return;
-                    const name = prompt('为共享起个名字 (最长20字符)：');
-                    if (!name) return;
-                    if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
-                    const newId = String(Math.floor(1000+Math.random()*9000));
-                    
-                    const userName = currentUser.nickname || '未知用户';
-                    
+                    const text = promptArea.value.trim(); if (!text) return;
+                    const name = prompt('为共享起个名字 (最长20字符)：'); if (!name) return; if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
+                    const newId = String(Math.floor(1000+Math.random()*9000)); const userName = currentUser.nickname || '未知用户';
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
-                    supabaseClient.from('shared_prompts').insert([{ 
-                        id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false 
-                    }]).then(({error}) => {
-                        if (error) {
-                            alert('发布失败:' + error.message);
-                            syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`;
-                        } else { 
+                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false }]).then(({error}) => {
+                        if (error) { alert('发布失败:' + error.message); syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`; } 
+                        else { 
                             syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">共享成功</span>`;
-                            setTimeout(() => {
-                                syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`;
-                            }, 3000);
-                            document.getElementById('sortSelector').value = 'time'; 
-                            currentPageShared=1; fetchCloudData(); 
+                            setTimeout(() => { syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`; }, 3000);
+                            document.getElementById('sortSelector').value = 'time'; currentPageShared=1; fetchCloudData(); 
                         }
-                    });
-                    return;
+                    }); return;
                 }
                 
-                if (t.closest('#clearBtn')) { 
-                    promptArea.value = ''; 
-                    document.getElementById('charCount').textContent = "剩余 50000 字"; 
-                    return; 
-                }
-                
-                if (t.closest('#copyBtn')) {
-                    navigator.clipboard.writeText(promptArea.value);
-                    const b = t.closest('#copyBtn'); b.textContent = 'COPIED'; setTimeout(() => b.textContent = '复制指令', 1500); return;
-                }
-                
-                if (t.closest('#backBtn')) {
-                    if(history.length) { 
-                        promptArea.value = history.pop(); 
-                        document.getElementById('charCount').textContent = `剩余 ${50000 - promptArea.value.length} 字`; 
-                    } return;
-                }
-                
+                if (t.closest('#clearBtn')) { promptArea.value = ''; document.getElementById('charCount').textContent = "剩余 50000 字"; return; }
+                if (t.closest('#copyBtn')) { navigator.clipboard.writeText(promptArea.value); const b = t.closest('#copyBtn'); b.textContent = 'COPIED'; setTimeout(() => b.textContent = '复制指令', 1500); return; }
+                if (t.closest('#backBtn')) { if(history.length) { promptArea.value = history.pop(); document.getElementById('charCount').textContent = `剩余 ${50000 - promptArea.value.length} 字`; } return; }
                 if (t.closest('#refreshSharedBtn')) { fetchCloudData(); return; }
-                
-                if (t.closest('#addGroupBtn')) {
-                    favoriteGroups.push({ id: 'group_'+Date.now(), name: '新标签', items: [] });
-                    activeGroupIndex = favoriteGroups.length - 1; saveCloudAndSync(); return;
-                }
-
-                if (t.closest('.fav-tab') && !t.closest('.delete-group-btn') && !t.closest('.rename-btn')) {
-                    activeGroupIndex = parseInt(t.closest('.fav-tab').dataset.index);
-                    currentPageFav = 1; renderGroups(); return;
-                }
-                
+                if (t.closest('#addGroupBtn')) { favoriteGroups.push({ id: 'group_'+Date.now(), name: '新标签', items: [] }); activeGroupIndex = favoriteGroups.length - 1; saveCloudAndSync(); return; }
+                if (t.closest('.fav-tab') && !t.closest('.delete-group-btn') && !t.closest('.rename-btn')) { activeGroupIndex = parseInt(t.closest('.fav-tab').dataset.index); currentPageFav = 1; renderGroups(); return; }
                 if (t.closest('.delete-group-btn')) {
-                    const idx = parseInt(t.closest('.fav-tab').dataset.index);
-                    if (favoriteGroups[idx].id === 'group_default') return; 
-                    if (confirm('彻底删除此标签及词条？')) { favoriteGroups.splice(idx,1); saveCloudAndSync(); }
-                    return;
+                    const idx = parseInt(t.closest('.fav-tab').dataset.index); if (favoriteGroups[idx].id === 'group_default') return; 
+                    if (confirm('彻底删除此标签及词条？')) { favoriteGroups.splice(idx,1); saveCloudAndSync(); } return;
                 }
-                
-                if (t.closest('.rename-btn')) {
-                    const inp = t.closest('.fav-tab').querySelector('.group-name-input');
-                    if(inp) { inp.readOnly = false; inp.focus(); } return;
-                }
-
+                if (t.closest('.rename-btn')) { const inp = t.closest('.fav-tab').querySelector('.group-name-input'); if(inp) { inp.readOnly = false; inp.focus(); } return; }
                 if (t.closest('.prev-page-fav')) { currentPageFav--; renderGroups(); return; }
                 if (t.closest('.next-page-fav')) { currentPageFav++; renderGroups(); return; }
                 if (t.closest('.prev-page-shared')) { currentPageShared--; renderSharedGrid(); return; }
@@ -1443,154 +1169,102 @@
                 if (t.closest('.next-page-myshares')) { currentPageMyShares++; renderMyShares(); return; }
                 if (t.closest('.prev-page-admin')) { currentPageAdmin--; renderAdminPanel(); return; }
                 if (t.closest('.next-page-admin')) { currentPageAdmin++; renderAdminPanel(); return; }
-
-                if (t.closest('#mySelectAllBtn')) {
-                    document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = true);
-                    return;
-                }
-                if (t.closest('#myInverseSelectBtn')) {
-                    document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = !cb.checked);
-                    return;
-                }
-                
-                if (t.closest('#adminSelectAllBtn')) {
-                    document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = true);
-                    return;
-                }
-                if (t.closest('#adminInverseSelectBtn')) {
-                    document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = !cb.checked);
-                    return;
-                }
+                if (t.closest('#mySelectAllBtn')) { document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = true); return; }
+                if (t.closest('#myInverseSelectBtn')) { document.querySelectorAll('.myshare-cb').forEach(cb => cb.checked = !cb.checked); return; }
+                if (t.closest('#adminSelectAllBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = true); return; }
+                if (t.closest('#adminInverseSelectBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = !cb.checked); return; }
 
                 if (t.closest('.delete-item-btn')) {
-                    const uid = t.closest('.prompt-item').dataset.uid;
-                    favoriteGroups[activeGroupIndex].items = favoriteGroups[activeGroupIndex].items.filter(i => i._uid !== uid);
-                    saveCloudAndSync();
-                    return;
+                    const uid = t.closest('.prompt-item').dataset.uid; favoriteGroups[activeGroupIndex].items = favoriteGroups[activeGroupIndex].items.filter(i => i._uid !== uid); saveCloudAndSync(); return;
                 }
 
                 if (t.closest('.pin-admin-btn')) {
-                    if (!supabaseClient) return;
-                    const tr = t.closest('.admin-card');
-                    const id = tr.dataset.id;
-                    const item = sharedItems.find(i => i.id === id);
+                    if (!supabaseClient) return; const tr = t.closest('.admin-card'); const id = tr.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
-                        const newPinState = !item.is_pinned;
-                        supabaseClient.from('shared_prompts').update({ is_pinned: newPinState }).eq('id', id).then(({error}) => {
-                            if(!error) fetchCloudData();
-                        });
-                    }
-                    return;
+                        const newPinState = !item.is_pinned; 
+                        // 【修复】追加 .then() 确保置顶执行
+                        supabaseClient.from('shared_prompts').update({ is_pinned: newPinState }).eq('id', id).then(({error}) => { if(!error) fetchCloudData(); });
+                    } return;
                 }
                 
-                // 添加子管理员
                 if (t.closest('#addSubAdminBtn') && supabaseClient) {
-                    const acc = document.getElementById('newSubAdminAccount').value.trim();
-                    if (!acc || acc === ROOT_ADMIN || subAdmins.includes(acc)) return;
+                    const acc = document.getElementById('newSubAdminAccount').value.trim(); if (!acc || acc === ROOT_ADMIN || subAdmins.includes(acc)) return;
                     supabaseClient.from('admin_whitelist').insert([{ account_name: acc }]).then(({error}) => {
-                        if(!error) { 
-                            subAdmins.push(acc); 
-                            document.getElementById('newSubAdminAccount').value = ''; 
-                            renderSubAdmins(); 
-                            alert('管理员添加成功'); 
-                        } else {
-                            alert('添加失败: ' + error.message);
-                        }
+                        if(!error) { subAdmins.push(acc); document.getElementById('newSubAdminAccount').value = ''; renderSubAdmins(); alert('管理员添加成功'); } else { alert('添加失败: ' + error.message); }
                     }); return;
                 }
                 
-                // 移除子管理员
                 if (t.closest('.delete-subadmin-btn') && supabaseClient) {
                     const acc = t.closest('.delete-subadmin-btn').dataset.account;
                     if(confirm(`确定要移除管理员身份: ${acc}?`)) {
-                        supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then(({error}) => {
-                            if(!error) { 
-                                subAdmins = subAdmins.filter(e => e !== acc); 
-                                renderSubAdmins(); 
-                            }
-                        });
+                        supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then(({error}) => { if(!error) { subAdmins = subAdmins.filter(e => e !== acc); renderSubAdmins(); } });
                     } return;
                 }
 
                 if (t.closest('#adminBatchDelete') && supabaseClient) {
-                    const cbs = document.querySelectorAll('.admin-cb:checked');
-                    if(cbs.length === 0) return;
+                    const cbs = document.querySelectorAll('.admin-cb:checked'); if(cbs.length === 0) return;
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
-                    if(confirm(`删除 ${ids.length} 个词汇？`)) {
-                        supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData());
-                    } return;
+                    if(confirm(`删除 ${ids.length} 个词汇？`)) { supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData()); } return;
                 }
                 
                 if (t.closest('#myBatchDelete') && supabaseClient) {
-                    const cbs = document.querySelectorAll('.myshare-cb:checked');
-                    if(cbs.length === 0) return;
+                    const cbs = document.querySelectorAll('.myshare-cb:checked'); if(cbs.length === 0) return;
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
-                    if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) {
-                        supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData());
-                    } return;
+                    if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) { supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData()); } return;
                 }
 
+                // 处理云端收藏的增加/取消
                 if (t.closest('.fav-action')) {
-                    const item = t.closest('.prompt-item');
-                    const id = item.dataset.id;
-                    const text = item.dataset.text;
+                    if (!currentUser) { alert('此操作需要登入账号！'); authModal.classList.remove('hidden'); return; }
+
+                    const item = t.closest('.prompt-item'); const id = item.dataset.id; const text = item.dataset.text;
                     const exists = favoriteGroups.some(g => g.items.some(i => (id && i.id === id) || (!id && i.text === text)));
                     
                     if (exists) {
                         favoriteGroups.forEach(g => g.items = g.items.filter(i => (id ? i.id !== id : i.text !== text)));
-                        // 【新增】：如果取消收藏，且该词条属于云端大厅，真正向云端发送扣除收藏量指令
                         if (id && supabaseClient) {
                             const dbItem = sharedItems.find(i => i.id === id);
                             if (dbItem && parseInt(dbItem.favs || 0) > 0) {
                                 dbItem.favs = (parseInt(dbItem.favs) - 1).toString();
-                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id);
+                                // 【修复】追加 .then() 发送撤销收藏请求
+                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id).then();
                             }
                         }
                     } else {
                         favoriteGroups[0].items.unshift({ _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: id||'', name: item.dataset.name, text: text });
-                        // 【新增】：如果增加收藏，且该词条属于云端大厅，真正向云端发送增加收藏量指令
                         if (id && supabaseClient) {
                             const dbItem = sharedItems.find(i => i.id === id);
                             if (dbItem) {
                                 dbItem.favs = (parseInt(dbItem.favs || 0) + 1).toString();
-                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id);
+                                // 【修复】追加 .then() 发送增加收藏请求
+                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id).then();
                             }
                         }
                     }
-                    
                     saveCloudAndSync(); 
-                    // 【新增】：强制重新渲染大厅，确保大厅页面的星星数字也能立刻变化
                     if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
                     return;
                 }
 
                 if (t.closest('.edit-item-btn')) {
-                    const itemEl = t.closest('.prompt-item');
-                    const newName = prompt('修改本地名称 (最长20字符):', itemEl.dataset.name);
-                    if(newName) {
-                        if (newName.length > 20) { alert('限制20字符以内'); return; }
-                        const obj = favoriteGroups[activeGroupIndex].items.find(i => i._uid === itemEl.dataset.uid);
-                        if(obj) { obj.name = newName; saveCloudAndSync(); }
-                    } return;
+                    const itemEl = t.closest('.prompt-item'); const newName = prompt('修改本地名称 (最长20字符):', itemEl.dataset.name);
+                    if(newName) { if (newName.length > 20) { alert('限制20字符以内'); return; } const obj = favoriteGroups[activeGroupIndex].items.find(i => i._uid === itemEl.dataset.uid); if(obj) { obj.name = newName; saveCloudAndSync(); } } return;
                 }
 
-                // 注入词汇到终端
+                // 注入词条并增加使用量
                 if (t.closest('.prompt-item') && !t.closest('.fav-action') && !t.closest('button') && !t.closest('input')) {
                     const item = t.closest('.prompt-item');
                     history.push(promptArea.value);
                     promptArea.value += (promptArea.value && !promptArea.value.endsWith('\n') ? '\n' : '') + item.dataset.text;
-                    const max = 50000;
-                    document.getElementById('charCount').textContent = `剩余 ${max - promptArea.value.length} 字`;
+                    document.getElementById('charCount').textContent = `剩余 ${50000 - promptArea.value.length} 字`;
 
-                    // 【新增】：如果该词汇拥有ID(属于云端共享池)，将其注入终端视为一次"使用"，并实时同步至云端
                     if (item.dataset.id && supabaseClient) {
-                        const id = item.dataset.id;
-                        const dbItem = sharedItems.find(i => i.id === id);
+                        const id = item.dataset.id; const dbItem = sharedItems.find(i => i.id === id);
                         if (dbItem) {
                             dbItem.usage = (parseInt(dbItem.usage || 0) + 1).toString();
-                            const uEl = item.querySelector('.usage-count-text');
-                            if (uEl) uEl.textContent = dbItem.usage;
-                            supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id);
+                            const uEl = item.querySelector('.usage-count-text'); if (uEl) uEl.textContent = dbItem.usage;
+                            // 【修复】追加 .then() 强制执行更新
+                            supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id).then();
                         }
                     }
                 }
@@ -1598,10 +1272,8 @@
 
             document.body.addEventListener('blur', (e) => {
                 if (e.target.classList.contains('group-name-input')) {
-                    e.target.readOnly = true;
-                    e.target.classList.add('bg-transparent'); e.target.classList.remove('bg-black/60', 'border-[#ffc107]');
-                    favoriteGroups[activeGroupIndex].name = e.target.value.trim().substring(0, 20) || '未命名';
-                    saveCloudAndSync(false);
+                    e.target.readOnly = true; e.target.classList.add('bg-transparent'); e.target.classList.remove('bg-black/60', 'border-[#ffc107]');
+                    favoriteGroups[activeGroupIndex].name = e.target.value.trim().substring(0, 20) || '未命名'; saveCloudAndSync(false);
                 }
             }, true);
             
@@ -1623,4 +1295,3 @@
     </script>
 </body>
 </html>
-
