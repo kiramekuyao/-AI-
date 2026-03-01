@@ -870,7 +870,7 @@
                 new Sortable(zone, {
                     group: 'favorites', 
                     animation: 150, 
-                    delay: 500,
+                    delay: 100,
                     delayOnTouchOnly: false, 
                     ghostClass: 'sortable-ghost',
                     filter: '.empty-placeholder, .pagination-controls, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
@@ -965,7 +965,7 @@
                     new Sortable(sharedGrid, { 
                         group: { name:'favorites', pull:'clone', put:false }, 
                         sort:false, 
-                        delay: 500,
+                        delay: 100,
                         delayOnTouchOnly: false,
                         filter: '.prev-page-shared, .next-page-shared, .copy-shared-btn',
                         onStart:(e) => { globalDraggedItem = e.item; }, 
@@ -1095,11 +1095,17 @@
                 const allFavIds = favoriteGroups.flatMap(g => g.items).filter(i => i.id).map(i => i.id);
                 const allFavText = favoriteGroups.flatMap(g => g.items).filter(i => !i.id).map(i => i.text); 
                 
-                document.querySelectorAll('#sharedGrid .prompt-item').forEach(el => {
+                // 【修改】：扩大检索范围到所有卡片（包含收藏夹和大厅），彻底抛弃 +1 伪装算法
+                document.querySelectorAll('.prompt-item').forEach(el => {
                     const isSaved = (el.dataset.id && allFavIds.includes(el.dataset.id)) || (!el.dataset.id && allFavText.includes(el.dataset.text));
                     el.classList.toggle('is-fav', isSaved);
+                    
                     const counter = el.querySelector('.fav-count-text');
-                    if(counter) counter.textContent = isSaved ? parseInt(el.dataset.favs||0) + 1 : parseInt(el.dataset.favs||0);
+                    if(counter && el.dataset.id) {
+                        // 强制从云端内存中读取最真实的收藏数
+                        const dbItem = sharedItems.find(i => i.id === el.dataset.id);
+                        if (dbItem) counter.textContent = dbItem.favs;
+                    }
                 });
             }
             
@@ -1532,10 +1538,30 @@
                     
                     if (exists) {
                         favoriteGroups.forEach(g => g.items = g.items.filter(i => (id ? i.id !== id : i.text !== text)));
+                        // 【新增】：如果取消收藏，且该词条属于云端大厅，真正向云端发送扣除收藏量指令
+                        if (id && supabaseClient) {
+                            const dbItem = sharedItems.find(i => i.id === id);
+                            if (dbItem && parseInt(dbItem.favs || 0) > 0) {
+                                dbItem.favs = (parseInt(dbItem.favs) - 1).toString();
+                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id);
+                            }
+                        }
                     } else {
                         favoriteGroups[0].items.unshift({ _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: id||'', name: item.dataset.name, text: text });
+                        // 【新增】：如果增加收藏，且该词条属于云端大厅，真正向云端发送增加收藏量指令
+                        if (id && supabaseClient) {
+                            const dbItem = sharedItems.find(i => i.id === id);
+                            if (dbItem) {
+                                dbItem.favs = (parseInt(dbItem.favs || 0) + 1).toString();
+                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id);
+                            }
+                        }
                     }
-                    saveCloudAndSync(); return;
+                    
+                    saveCloudAndSync(); 
+                    // 【新增】：强制重新渲染大厅，确保大厅页面的星星数字也能立刻变化
+                    if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
+                    return;
                 }
 
                 if (t.closest('.edit-item-btn')) {
@@ -1597,3 +1623,4 @@
     </script>
 </body>
 </html>
+
