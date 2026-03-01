@@ -348,15 +348,19 @@
     </div>
 
     <script>
-        // HTML 防截断转义引擎
         function escapeHTML(str) {
             if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        // ================= 新增：数值格式化函数 =================
+        function formatCount(numStr) {
+            let n = parseInt(numStr || 0, 10);
+            if (isNaN(n)) n = 0;
+            if (n >= 1000000) return '100W+';
+            if (n >= 10000) return Math.floor(n / 10000) + 'W+';
+            if (n >= 1000) return Math.floor(n / 1000) + 'K+';
+            return n.toString();
         }
 
         const SUPABASE_URL = 'https://mywunmfuqiotfvhbzkje.supabase.co';
@@ -414,8 +418,18 @@
             let favSearchQuery = '', sharedSearchQuery = '';
             let history = []; 
 
-            let favoriteGroups = []; // 初始化为空，强制依托云端
+            let favoriteGroups = []; 
             let sharedItems = [];
+
+            // ================= 新增：开启 Supabase 实时广播订阅大厅 =================
+            if (supabaseClient) {
+                supabaseClient.channel('realtime_shared_prompts')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, payload => {
+                        // 发现大厅数据变化时，静默拉取更新（不显示中间的 loading 遮罩）
+                        fetchCloudData(false);
+                    })
+                    .subscribe();
+            }
 
             promptArea.addEventListener('input', () => {
                 const max = 50000;
@@ -423,10 +437,13 @@
                 charCount.textContent = `剩余 ${remaining} 字`;
             });
 
-            async function fetchCloudData() {
+            // 加入 showLoading 参数，支持实时热更新静默加载
+            async function fetchCloudData(showLoading = true) {
                 if (!supabaseClient) return;
-                cloudLoading.classList.remove('hidden');
-                sharedGrid.classList.add('hidden');
+                if (showLoading) {
+                    cloudLoading.classList.remove('hidden');
+                    sharedGrid.classList.add('hidden');
+                }
                 try {
                     const { data, error } = await supabaseClient.from('shared_prompts').select('*').order('time', { ascending: false });
                     if (error) throw error;
@@ -450,7 +467,6 @@
                         });
                     }
                     if (needsSave && currentUser) {
-                        // 【修复】追加了 .then() 触发请求
                         supabaseClient.from('user_favorites').upsert({
                             user_id: currentUser.id,
                             fav_data: JSON.stringify(favoriteGroups)
@@ -458,13 +474,14 @@
                             if(error) console.error("静默云端同步失败", error);
                         });
                     }
-
                 } catch (err) {
                     console.error("数据拉取失败:", err);
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> <span class="text-red-400">大厅数据异常</span>`;
                 } finally {
-                    cloudLoading.classList.add('hidden');
-                    sharedGrid.classList.remove('hidden');
+                    if (showLoading) {
+                        cloudLoading.classList.add('hidden');
+                        sharedGrid.classList.remove('hidden');
+                    }
                     renderSharedGrid();
                     if (!groupsContainer.classList.contains('hidden')) renderGroups();
                     if(!mySharesContainer.classList.contains('hidden')) renderMyShares();
@@ -485,7 +502,6 @@
                             g.items.forEach(item => { if (!item._uid) item._uid = 'uid_' + Math.random().toString(36).substr(2, 9); });
                         });
                     } else {
-                        // 新用户云端首次初始化
                         favoriteGroups = [{ id: 'group_default', name: '默认收藏', items: [], isDefault: true }];
                     }
                 } catch (err) {
@@ -497,7 +513,6 @@
                 }
             }
 
-            // 初始化应用逻辑
             async function initApp(user) {
                 currentUser = user;
                 await updateLoginUI(user);
@@ -505,7 +520,6 @@
                     await fetchUserFavorites(user);
                     await fetchCloudData();
                 } else {
-                    // 【重构核心】未登录状态下彻底清空本地虚假内存
                     favoriteGroups = [];
                     renderGroups();
                     await fetchCloudData();
@@ -563,7 +577,6 @@
                 
                 if (!supabaseClient || !currentUser) return;
                 try {
-                    // 【修复】追加了 .then()
                     await supabaseClient.from('user_favorites').upsert({
                         user_id: currentUser.id,
                         fav_data: JSON.stringify(favoriteGroups)
@@ -656,7 +669,6 @@
                     if(currentUser && currentUser.account_name === acc) { localStorage.removeItem('yaoai_user'); initApp(null); }
                 } catch(e) { alert(e.message); } finally { hideAuthLoading(); }
             });
-            // ======================================
 
             function resetTabs() {
                 document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-gray-500 hover:text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
@@ -690,7 +702,6 @@
             };
 
             function renderGroups() {
-                // 【重构核心】未登录强制拦截，完全抛弃本地化
                 if (!currentUser) {
                     groupsContainer.innerHTML = `
                         <div class="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-white/10 border-dashed rounded-lg shadow-inner">
@@ -762,8 +773,8 @@
                                 <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(displayItem.authorName || '未知')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(displayItem.authorName || '未知')}</span>
                             </div>
                             <div class="prompt-content group-hover:pr-[60px] transition-all">${escapeHTML(displayItem.name || '')}</div>
-                            <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${displayItem.favs || 0}</span></div>
-                            <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${displayItem.usage || 0}</span></div>
+                            <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${formatCount(displayItem.favs)}</span></div>
+                            <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${formatCount(displayItem.usage)}</span></div>
                             <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                                 <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容"><i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i></button>
                                 <button class="delete-item-btn text-gray-400 hover:text-red-500 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="无感移除该词条"><i class="fa-solid fa-trash-can pointer-events-none text-xs w-3 text-center"></i></button>
@@ -792,7 +803,7 @@
                 new Sortable(zone, {
                     group: 'favorites', 
                     animation: 150, 
-                    delay: 50, // 【修复】拖拽防误触降低为50毫秒
+                    delay: 50, 
                     delayOnTouchOnly: false, 
                     ghostClass: 'sortable-ghost',
                     filter: '.empty-placeholder, .pagination-controls, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
@@ -842,8 +853,8 @@
                             <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(i.authorName || '未知用户')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(i.authorName || '未知用户')}</span>
                         </div>
                         <div class="prompt-content group-hover:pr-[85px] transition-all">${escapeHTML(i.name)}</div>
-                        <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${i.favs}</span></div>
-                        <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${i.usage || 0}</span></div>
+                        <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${formatCount(i.favs)}</span></div>
+                        <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${formatCount(i.usage)}</span></div>
                         <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-60 group-hover:opacity-100 transition-all z-10">
                             <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制并增加使用量"><i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i></button>
                         </div>
@@ -864,7 +875,7 @@
                     new Sortable(sharedGrid, { 
                         group: { name:'favorites', pull:'clone', put:false }, 
                         sort:false, 
-                        delay: 50, // 【修复】拖拽防误触降低为50毫秒
+                        delay: 50,
                         delayOnTouchOnly: false,
                         filter: '.prev-page-shared, .next-page-shared, .copy-shared-btn',
                         onStart:(e) => { globalDraggedItem = e.item; }, 
@@ -890,7 +901,7 @@
                         <div class="absolute top-2.5 right-3 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="myshare-cb accent-blue-500 w-4 h-4 cursor-pointer shadow-lg shadow-black"></div>
                         <div class="w-full bg-[#0f1923] px-3 py-2 border-b border-white/10 flex justify-between items-center shrink-0">
                             <span class="font-mono text-cyan-400 text-sm tracking-widest">#${i.id}</span>
-                            <span class="text-[10px] text-gray-500 mr-7 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${i.favs}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${i.usage}</span></span>
+                            <span class="text-[10px] text-gray-500 mr-7 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${formatCount(i.favs)}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${formatCount(i.usage)}</span></span>
                         </div>
                         <div class="p-3 w-full flex-grow flex flex-col pointer-events-none">
                             <h4 class="font-bold text-white text-sm mb-2 pr-6 truncate">${escapeHTML(i.name)}</h4>
@@ -942,14 +953,14 @@
                     <div class="prompt-item group relative flex flex-col items-start admin-card admin-card-root ${i.is_pinned ? 'border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : ''}" data-id="${i.id}">
                         <div class="absolute top-9 right-3 z-10 flex flex-col gap-2 items-center" onclick="event.stopPropagation()">
                             <input type="checkbox" class="admin-cb accent-red-500 w-4 h-4 cursor-pointer shadow-lg shadow-black">
-                            <button class="pin-admin-btn text-${i.is_pinned ? 'yellow-400' : 'gray-600'} hover:text-yellow-300 transition-colors outline-none bg-black/60 rounded-full w-5 h-5 flex items-center justify-center border border-white/5 shadow-md" title="全网置顶"><i class="fa-solid fa-thumbtack text-[10px]"></i></button>
+                            <button class="pin-admin-btn text-${i.is_pinned ? 'yellow-400' : 'gray-600'} hover:text-yellow-300 transition-colors outline-none bg-black/60 rounded-full w-5 h-5 flex items-center justify-center border border-white/5 shadow-md" title="全网置顶"><i class="fa-solid fa-thumbtack text-[10px] pointer-events-none"></i></button>
                         </div>
                         <div class="w-full bg-[#0f1923] px-3 py-2 border-b border-white/10 flex justify-between items-center shrink-0">
                             <div class="flex items-center gap-2">
                                 <span class="font-mono text-cyan-400 text-xs tracking-widest">#${i.id}</span>
                                 <span class="text-[10px] text-purple-400 border-l border-white/10 pl-2 truncate max-w-[80px]" title="发布者: ${escapeHTML(i.authorName || '未知用户')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(i.authorName || '未知')}</span>
                             </div>
-                            <span class="text-[10px] text-gray-500 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${i.favs}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${i.usage}</span></span>
+                            <span class="text-[10px] text-gray-500 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${formatCount(i.favs)}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${formatCount(i.usage)}</span></span>
                         </div>
                         <div class="p-3 w-full flex-grow flex flex-col pointer-events-none">
                             <h4 class="font-bold text-white text-sm mb-2 pr-6 truncate">${escapeHTML(i.name)}</h4>
@@ -978,7 +989,7 @@
                     const counter = el.querySelector('.fav-count-text');
                     if(counter && el.dataset.id) {
                         const dbItem = sharedItems.find(i => i.id === el.dataset.id);
-                        if (dbItem) counter.textContent = dbItem.favs || 0;
+                        if (dbItem) counter.textContent = formatCount(dbItem.favs || 0);
                     }
                 });
             }
@@ -1015,9 +1026,10 @@
             document.body.addEventListener('click', (e) => {
                 const t = e.target;
                 
-                if (t.closest('.admin-card')) {
-                    if (t.closest('input') || t.closest('button')) return;
-                    const card = t.closest('.admin-card'); const id = card.dataset.id; const item = sharedItems.find(i => i.id === id);
+                // 【修复】：取消阻止事件冒泡引起的置顶失效
+                const adminCard = t.closest('.admin-card');
+                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn')) {
+                    const id = adminCard.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
                         currentEditItemId = id; editModalId.textContent = `#${id}`; editModalName.value = item.name || ''; editModalText.value = item.text || ''; editModal.classList.remove('hidden');
                     } return;
@@ -1031,7 +1043,6 @@
                     const originalBtnContent = saveEditBtn.innerHTML;
                     saveEditBtn.disabled = true; saveEditBtn.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin"></i> 同步更新中...`;
 
-                    // 【修复】追加 .then() 以确保执行
                     supabaseClient.from('shared_prompts').update({ name: newName, text: newText }).eq('id', currentEditItemId).then(({error}) => {
                         saveEditBtn.disabled = false; saveEditBtn.innerHTML = originalBtnContent;
                         if (error) alert('更新失败: ' + error.message); else { closeEditModal(); fetchCloudData(); }
@@ -1106,7 +1117,6 @@
                     }); return;
                 }
 
-                // 复制并增加使用量
                 if (t.closest('.copy-item-btn') || t.closest('.copy-shared-btn')) {
                     e.stopPropagation();
                     const btn = t.closest('button'); const item = t.closest('.prompt-item'); const text = item.dataset.text;
@@ -1117,8 +1127,7 @@
                         const id = item.dataset.id; const dbItem = sharedItems.find(i => i.id === id);
                         if (dbItem) {
                             dbItem.usage = (parseInt(dbItem.usage || 0) + 1).toString();
-                            const uEl = item.querySelector('.usage-count-text'); if (uEl) uEl.textContent = dbItem.usage;
-                            // 【修复】追加 .then() 强制执行更新
+                            const uEl = item.querySelector('.usage-count-text'); if (uEl) uEl.textContent = formatCount(dbItem.usage);
                             supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id).then();
                         }
                     } return;
@@ -1178,11 +1187,11 @@
                     const uid = t.closest('.prompt-item').dataset.uid; favoriteGroups[activeGroupIndex].items = favoriteGroups[activeGroupIndex].items.filter(i => i._uid !== uid); saveCloudAndSync(); return;
                 }
 
+                // 【修复】：点击置顶恢复生效
                 if (t.closest('.pin-admin-btn')) {
                     if (!supabaseClient) return; const tr = t.closest('.admin-card'); const id = tr.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
                         const newPinState = !item.is_pinned; 
-                        // 【修复】追加 .then() 确保置顶执行
                         supabaseClient.from('shared_prompts').update({ is_pinned: newPinState }).eq('id', id).then(({error}) => { if(!error) fetchCloudData(); });
                     } return;
                 }
@@ -1213,7 +1222,6 @@
                     if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) { supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData()); } return;
                 }
 
-                // 处理云端收藏的增加/取消
                 if (t.closest('.fav-action')) {
                     if (!currentUser) { alert('此操作需要登入账号！'); authModal.classList.remove('hidden'); return; }
 
@@ -1226,7 +1234,6 @@
                             const dbItem = sharedItems.find(i => i.id === id);
                             if (dbItem && parseInt(dbItem.favs || 0) > 0) {
                                 dbItem.favs = (parseInt(dbItem.favs) - 1).toString();
-                                // 【修复】追加 .then() 发送撤销收藏请求
                                 supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id).then();
                             }
                         }
@@ -1236,7 +1243,6 @@
                             const dbItem = sharedItems.find(i => i.id === id);
                             if (dbItem) {
                                 dbItem.favs = (parseInt(dbItem.favs || 0) + 1).toString();
-                                // 【修复】追加 .then() 发送增加收藏请求
                                 supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id).then();
                             }
                         }
@@ -1251,7 +1257,6 @@
                     if(newName) { if (newName.length > 20) { alert('限制20字符以内'); return; } const obj = favoriteGroups[activeGroupIndex].items.find(i => i._uid === itemEl.dataset.uid); if(obj) { obj.name = newName; saveCloudAndSync(); } } return;
                 }
 
-                // 注入词条并增加使用量
                 if (t.closest('.prompt-item') && !t.closest('.fav-action') && !t.closest('button') && !t.closest('input')) {
                     const item = t.closest('.prompt-item');
                     history.push(promptArea.value);
@@ -1262,8 +1267,7 @@
                         const id = item.dataset.id; const dbItem = sharedItems.find(i => i.id === id);
                         if (dbItem) {
                             dbItem.usage = (parseInt(dbItem.usage || 0) + 1).toString();
-                            const uEl = item.querySelector('.usage-count-text'); if (uEl) uEl.textContent = dbItem.usage;
-                            // 【修复】追加 .then() 强制执行更新
+                            const uEl = item.querySelector('.usage-count-text'); if (uEl) uEl.textContent = formatCount(dbItem.usage);
                             supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id).then();
                         }
                     }
