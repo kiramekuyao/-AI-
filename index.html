@@ -1,11 +1,9 @@
-
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>耀AI-共享焚决 (云端互通版)</title>
+    <title>耀AI-香蕉独立版 (云端互通版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
@@ -89,9 +87,9 @@
 <body class="h-screen flex flex-col relative">
     <nav class="h-14 bg-[#0f1923] border-b border-white/10 flex items-center justify-center shrink-0 z-50 relative">
         <div class="flex items-center gap-3">
-            <img src="Logo.jpg" alt="耀AI Logo" class="w-10 h-10 rounded-md object-cover shadow-[0_0_12px_rgba(0,255,255,0.2)] border border-white/5" onerror="this.src='https://via.placeholder.com/40'">
+            <img src="Logo.jpg" alt="耀AI-香蕉独立版 Logo" class="w-10 h-10 rounded-md object-cover shadow-[0_0_12px_rgba(0,255,255,0.2)] border border-white/5" onerror="this.src='https://via.placeholder.com/40'">
             <div class="flex flex-col justify-center">
-                <h1 class="font-tactical text-2xl text-white tracking-widest uppercase leading-none mt-1">耀AI-共享焚决</h1>
+                <h1 class="font-tactical text-2xl text-white tracking-widest uppercase leading-none mt-1">耀AI-香蕉独立版</h1>
                 <p class="text-[10px] text-gray-400 font-bold tracking-widest font-tactical leading-none mt-0.5">TERMINAL OS - CLOUD EDITION</p>
             </div>
         </div>
@@ -130,7 +128,6 @@
             <div class="p-6 w-full" style="min-width: 560px;">
                 
                 <div id="favoritesRoot">
-                    <!-- 登录/登出区域：与云端收藏夹左对齐 -->
                     <div class="flex items-center gap-2 mb-3">
                         <div id="loginBtn" class="cursor-pointer px-5 py-2 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold shrink-0">
                             <i class="fa-solid fa-user-shield mr-1"></i> <span id="loginText">登录 / 注册</span>
@@ -142,7 +139,6 @@
                             <i class="fa-solid fa-cloud-arrow-down"></i> 系统初始化...
                         </div>
                     </div>
-                    <!-- 标签行 -->
                     <div class="flex items-center gap-6 mb-8">
                         <h3 id="tabFavorites" class="cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all shrink-0">
                             <i class="fa-solid fa-box-archive"></i> 云端收藏夹
@@ -421,7 +417,6 @@
             const ITEMS_PER_PAGE = 12;
             const ADMIN_ITEMS_PER_PAGE = 10;
             
-            // 【重构】完全分离各搜索框的状态，防止交叉污染
             let currentPageFav = 1, currentPageShared = 1, currentPageMyShares = 1, currentPageAdmin = 1;
             let favSearchQuery = '', mySharesSearchQuery = '', adminSearchQuery = '', sharedSearchQuery = '';
             let history = []; 
@@ -860,6 +855,9 @@
                 const sortBy = document.getElementById('sortSelector')?.value || 'time';
                 let items = [...sharedItems].filter(i => (i.name||'').toLowerCase().includes(sharedSearchQuery) || (i.id && i.id.includes(sharedSearchQuery.replace('#',''))));
                 
+                // 【新增】拦截未审核的词条，且兼容旧数据 (null 视为已审核)
+                items = items.filter(i => i.is_approved !== false); 
+                
                 items.sort((a,b) => {
                     if (a.is_pinned && !b.is_pinned) return -1;
                     if (!a.is_pinned && b.is_pinned) return 1;
@@ -927,7 +925,10 @@
                     <div class="prompt-item group relative flex flex-col items-start admin-card border-blue-500/30 hover:border-blue-400" data-id="${i.id}">
                         <div class="absolute top-2.5 right-3 z-10"><input type="checkbox" class="myshare-cb accent-blue-500 w-4 h-4 cursor-pointer shadow-lg shadow-black"></div>
                         <div class="w-full bg-[#0f1923] px-3 py-2 border-b border-white/10 flex justify-between items-center shrink-0">
-                            <span class="font-mono text-cyan-400 text-sm tracking-widest">#${i.id}</span>
+                            <div class="flex items-center gap-2">
+                                <span class="font-mono text-cyan-400 text-sm tracking-widest">#${i.id}</span>
+                                ${i.is_approved === false ? '<span class="text-[10px] bg-red-500/10 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded font-tactical">审核中</span>' : '<span class="text-[10px] bg-green-500/10 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded font-tactical">已发布</span>'}
+                            </div>
                             <span class="text-[10px] text-gray-500 mr-7 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${formatCount(i.favs)}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${formatCount(i.usage)}</span></span>
                         </div>
                         <div class="p-3 w-full flex-grow flex flex-col pointer-events-none">
@@ -981,6 +982,7 @@
                         <div class="absolute top-9 right-3 z-10 flex flex-col gap-2 items-center">
                             <input type="checkbox" class="admin-cb accent-red-500 w-4 h-4 cursor-pointer shadow-lg shadow-black">
                             <button class="pin-admin-btn text-${i.is_pinned ? 'yellow-400' : 'gray-600'} hover:text-yellow-300 transition-colors outline-none bg-black/60 rounded-full w-5 h-5 flex items-center justify-center border border-white/5 shadow-md" title="全网置顶"><i class="fa-solid fa-thumbtack text-[10px] pointer-events-none"></i></button>
+                            ${i.is_approved === false ? `<button class="approve-admin-btn text-green-400 hover:text-green-300 bg-black/60 rounded-full w-5 h-5 flex items-center justify-center border border-green-500/30 shadow-md transition-colors mt-1" title="通过审核"><i class="fa-solid fa-check text-[10px] pointer-events-none"></i></button>` : ''}
                         </div>
                         <div class="w-full bg-[#0f1923] px-3 py-2 border-b border-white/10 flex justify-between items-center shrink-0">
                             <div class="flex items-center gap-2">
@@ -1065,7 +1067,7 @@
                 const t = e.target;
                 
                 const adminCard = t.closest('.admin-card');
-                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn') && !t.closest('.myshare-cb') && !t.closest('.admin-cb')) {
+                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn') && !t.closest('.myshare-cb') && !t.closest('.admin-cb') && !t.closest('.approve-admin-btn')) {
                     const id = adminCard.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
                         currentEditItemId = id; editModalId.textContent = `#${id}`; editModalName.value = item.name || ''; editModalText.value = item.text || ''; editModal.classList.remove('hidden');
@@ -1141,7 +1143,7 @@
                     const newId = String(Math.floor(1000+Math.random()*9000)); const userName = currentUser.nickname || '未知用户';
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
-                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false }]).then(({error}) => {
+                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: isAdminLoggedIn }]).then(({error}) => {
                         if (error) {
                             alert('发布失败:' + error.message); syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`;
                         } else { 
@@ -1186,7 +1188,7 @@
                     const name = prompt('为共享起个名字 (最长20字符)：'); if (!name) return; if (name.length > 20) { alert('名称过长，请精简至20字符内。'); return; }
                     const newId = String(Math.floor(1000+Math.random()*9000)); const userName = currentUser.nickname || '未知用户';
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate fa-spin text-blue-400"></i> <span class="text-blue-400">发布中...</span>`;
-                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false }]).then(({error}) => {
+                    supabaseClient.from('shared_prompts').insert([{ id: newId, name: name, text: text, favs: "0", usage: "0", time: Date.now().toString(), authorId: currentUser.id, authorName: userName, is_pinned: false, is_approved: isAdminLoggedIn }]).then(({error}) => {
                         if (error) { alert('发布失败:' + error.message); syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">云端已连接</span>`; } 
                         else { 
                             syncStatusEl.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> <span class="text-green-400">共享成功</span>`;
@@ -1263,6 +1265,25 @@
                     }
                     saveCloudAndSync(); 
                     if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
+                    return;
+                }
+
+                // 【新增】管理员审核通过
+                if (t.closest('.approve-admin-btn')) {
+                    if (!supabaseClient) return; 
+                    const tr = t.closest('.admin-card'); 
+                    const id = tr.dataset.id; 
+                    const btn = t.closest('.approve-admin-btn');
+                    const originalIcon = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i>';
+                    
+                    supabaseClient.from('shared_prompts').update({ is_approved: true }).eq('id', id).then(({error}) => { 
+                        if(!error) fetchCloudData(); 
+                        else {
+                            alert('审核失败: ' + error.message);
+                            btn.innerHTML = originalIcon;
+                        }
+                    }); 
                     return;
                 }
 
