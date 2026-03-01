@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -16,8 +18,11 @@
         
         .prompt-item {
             background-color: #1f2326; border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 4px; transition: all 0.2s; display: flex; align-items: stretch; 
+            border-radius: 4px; transition: border-color 0.2s, background-color 0.2s;
+            display: flex; align-items: stretch; 
             height: 85px; overflow: hidden; user-select: none; position: relative;
+            min-width: 0; flex-shrink: 0; width: 100%;
+            box-sizing: border-box;
         }
         .prompt-item:hover { border-color: #ff4655; background-color: rgba(255, 70, 85, 0.05); }
         .drag-zone .prompt-item, #sharedGrid .prompt-item { cursor: grab; }
@@ -41,21 +46,21 @@
             border-right: 1px solid rgba(0, 255, 255, 0.2); border-bottom: 1px solid rgba(0, 255, 255, 0.2);
         }
         
+        /* 词汇卡片文字区：右边永远锁死，不随窗口伸缩 */
         .prompt-content {
-            flex-grow: 1; padding: 25px 10px 10px 10px; display: flex; align-items: center; justify-content: center;
-            text-align: center; font-weight: bold; font-size: 1.05rem; 
-            overflow-y: auto; word-break: break-all;
+            flex: 1 1 0%; 
+            min-width: 0;
+            padding: 0 80px 0 15px; 
+            display: flex; align-items: center;
+            font-weight: bold; font-size: 1.05rem; 
+            overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
         }
         
-        .prompt-content::-webkit-scrollbar { width: 3px; }
-        .prompt-content::-webkit-scrollbar-track { background: transparent; }
-        .prompt-content::-webkit-scrollbar-thumb { background: rgba(255, 70, 85, 0.5); border-radius: 3px; }
-        .prompt-content::-webkit-scrollbar-thumb:hover { background: #ff4655; }
-
         .fav-action {
-            width: 65px; background-color: rgba(255, 255, 255, 0.02); border-left: 1px solid rgba(255, 255, 255, 0.1);
+            width: 65px; min-width: 65px; max-width: 65px;
+            background-color: rgba(255, 255, 255, 0.02); border-left: 1px solid rgba(255, 255, 255, 0.1);
             display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer;
-            flex-shrink: 0;
+            flex-shrink: 0; flex-grow: 0;
         }
         .fav-action i { font-size: 26px; color: rgba(255, 255, 255, 0.15); pointer-events: none; }
         .fav-count-text { font-family: 'Teko', sans-serif; font-size: 20px; font-weight: 600; color: rgba(255, 255, 255, 0.25); pointer-events: none; line-height: 1; }
@@ -92,7 +97,7 @@
         </div>
     </nav>
 
-    <main class="flex-grow flex p-4 gap-6 overflow-hidden max-w-[1920px] mx-auto w-full relative">
+    <main class="flex-grow flex p-4 gap-6 max-w-[1920px] mx-auto w-full relative" style="overflow: hidden auto; min-width: 700px;">
         
         <aside id="terminalSidebar" class="w-[420px] flex flex-col shrink-0 border border-white/10 bg-[#0f1923] shadow-2xl relative transition-all duration-300 ease-in-out z-40">
             <div id="toggleTerminalBtn" class="absolute -right-5 top-1/2 -translate-y-1/2 w-5 h-20 bg-[#1f2326] border-y border-r border-white/10 flex items-center justify-center cursor-pointer text-gray-500 hover:text-white hover:bg-[#ff4655] transition-all rounded-r-md z-50 shadow-[4px_0_10px_rgba(0,0,0,0.3)]">
@@ -121,59 +126,57 @@
             </div>
         </aside>
 
-        <section class="flex-grow flex flex-col border border-white/10 bg-[#161b22] overflow-y-auto overflow-x-hidden relative" id="mainLibrary">
-            <div class="p-6 space-y-12 w-full">
+        <section class="flex-grow flex flex-col border border-white/10 bg-[#161b22] overflow-y-auto overflow-x-auto relative" id="mainLibrary" style="min-width: 600px;">
+            <div class="p-6 w-full" style="min-width: 560px;">
                 
                 <div id="favoritesRoot">
-                    <div class="flex items-center justify-between border-b border-white/10 pb-4">
-                        <div class="flex items-center gap-5 pt-1 shrink-0">
-                            <h3 id="tabFavorites" class="cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all">
-                                <i class="fa-solid fa-box-archive"></i> 云端收藏夹
-                            </h3>
-                            <h3 id="tabMyShares" class="cursor-pointer font-tactical text-2xl text-gray-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all">
-                                <i class="fa-solid fa-share-nodes"></i> 共享管理
-                            </h3>
-                            <h3 id="tabAdmin" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all">
-                                <i class="fa-solid fa-shield-halved"></i> 共享管理(ROOT)
-                            </h3>
-                            
-                            <div class="flex items-center gap-2 ml-4 border-l border-white/10 pl-4 mb-1">
-                                <button id="importJsonBtn" class="bg-green-500/10 text-green-400 border border-green-500/30 px-3 py-1.5 rounded text-sm font-bold hover:bg-green-500/20 transition-colors flex items-center gap-1.5 shadow-sm" title="支持导入JSON或魔导书TXT格式">
-                                    <i class="fa-solid fa-file-import"></i> 导入数据 (JSON/TXT)
-                                </button>
-                                <button id="exportJsonBtn" class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded text-sm font-bold hover:bg-blue-500/20 transition-colors flex items-center gap-1.5 shadow-sm">
-                                    <i class="fa-solid fa-file-export"></i> 导出JSON
-                                </button>
-                            </div>
-
-                            <div id="syncStatus" class="flex items-center gap-1.5 px-2 py-1 bg-black/30 border border-white/5 rounded text-xs font-tactical text-gray-500 ml-2 mb-1">
-                                <i class="fa-solid fa-cloud-arrow-down"></i> 系统初始化...
-                            </div>
+                    <!-- 登录/登出区域：与云端收藏夹左对齐 -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <div id="loginBtn" class="cursor-pointer px-5 py-2 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold shrink-0">
+                            <i class="fa-solid fa-user-shield mr-1"></i> <span id="loginText">登录 / 注册</span>
                         </div>
-
-                        <div class="flex items-center gap-4 flex-grow justify-end shrink-0 pl-10">
-                            <div class="flex items-center gap-2 shrink-0">
-                                <div id="loginBtn" class="cursor-pointer px-4 py-2 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold">
-                                    <i class="fa-solid fa-user-shield mr-1"></i> <span id="loginText">登录 / 注册</span>
-                                </div>
-                                <div id="logoutBtn" class="hidden cursor-pointer px-3 py-2 text-sm bg-red-600/20 border border-red-500/50 rounded text-red-400 hover:bg-red-600/40 transition-all font-bold" title="登出">
-                                    <i class="fa-solid fa-right-from-bracket"></i>
-                                </div>
-                            </div>
-                            
-                            <div class="relative w-full max-w-md">
-                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                                <input type="text" id="favSearchInput" placeholder="检索收藏夹档案..." class="search-input-focus bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all">
-                            </div>
-                            <button id="addGroupBtn" class="text-sm bg-[#ffc107]/10 border border-[#ffc107]/30 px-5 py-2.5 rounded hover:bg-[#ffc107]/20 font-bold uppercase tracking-tighter text-[#ffc107] transition-colors shrink-0">
-                                + 新建标签组
-                            </button>
+                        <div id="logoutBtn" class="hidden cursor-pointer px-4 py-2 text-sm bg-red-600/20 border border-red-500/50 rounded text-red-400 hover:bg-red-600/40 transition-all font-bold shrink-0" title="登出">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </div>
+                        <div id="syncStatus" class="flex items-center gap-1.5 px-3 py-1.5 bg-black/30 border border-white/5 rounded text-xs font-tactical text-gray-500 shrink-0">
+                            <i class="fa-solid fa-cloud-arrow-down"></i> 系统初始化...
                         </div>
                     </div>
+                    <!-- 标签行 -->
+                    <div class="flex items-center gap-6 mb-8">
+                        <h3 id="tabFavorites" class="cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all shrink-0">
+                            <i class="fa-solid fa-box-archive"></i> 云端收藏夹
+                        </h3>
+                        <h3 id="tabMyShares" class="cursor-pointer font-tactical text-2xl text-gray-500 hover:text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
+                            <i class="fa-solid fa-share-nodes"></i> 共享管理
+                        </h3>
+                        <h3 id="tabAdmin" class="hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all shrink-0">
+                            <i class="fa-solid fa-shield-halved"></i> 共享管理(ROOT)
+                        </h3>
+                    </div>
                     
-                    <div id="groupsContainer" class="mt-4 block"></div>
+                    <div id="favWrapper" class="block">
+                        <div class="relative w-full max-w-md mb-4" id="favSearchContainer">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="favSearchInput" placeholder="检索收藏夹档案..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-[#ffc107]">
+                        </div>
+                        
+                        <div class="flex items-center gap-3 mb-6" id="favActionButtons">
+                            <button id="addGroupBtn" class="text-sm bg-[#ffc107]/10 border border-[#ffc107]/30 px-5 py-2.5 rounded hover:bg-[#ffc107]/20 font-bold uppercase tracking-tighter text-[#ffc107] transition-colors shrink-0">
+                                + 新建收藏
+                            </button>
+                            <button id="importJsonBtn" class="bg-green-500/10 text-green-400 border border-green-500/30 px-5 py-2.5 rounded text-sm font-bold hover:bg-green-500/20 transition-colors flex items-center gap-1.5 shadow-sm" title="支持导入JSON或魔导书TXT格式">
+                                <i class="fa-solid fa-file-import"></i> 导入
+                            </button>
+                            <button id="exportJsonBtn" class="bg-blue-500/10 text-blue-400 border border-blue-500/30 px-5 py-2.5 rounded text-sm font-bold hover:bg-blue-500/20 transition-colors flex items-center gap-1.5 shadow-sm">
+                                <i class="fa-solid fa-file-export"></i> 导出
+                            </button>
+                        </div>
+                        
+                        <div id="groupsContainer" class="block"></div>
+                    </div>
                     
-                    <div id="mySharesContainer" class="hidden mt-6 flex-col gap-4">
+                    <div id="mySharesContainer" class="hidden flex-col gap-4">
                         <div class="flex justify-between items-center bg-[#161b22] p-4 rounded-lg border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.05)]">
                             <span class="text-blue-400 font-tactical text-lg mr-6 tracking-wider shrink-0"><i class="fa-solid fa-circle-info mr-2"></i>点击卡片查看并修改详细内容</span>
                             <div class="flex gap-4 border-l border-white/10 pl-6 shrink-0 flex-wrap">
@@ -182,18 +185,22 @@
                                 <button id="myInverseSelectBtn" class="bg-gray-500/10 text-gray-400 border border-gray-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-gray-500/30 hover:text-white transition-colors shadow-sm"><i class="fa-solid fa-arrows-rotate mr-1"></i>反选当页</button>
                             </div>
                         </div>
+                        <div class="relative w-full max-w-md mb-2 mt-2">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="mySharesSearchInput" placeholder="检索我的共享 (支持名称/ID)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-blue-400">
+                        </div>
                         <div id="mySharesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"></div>
                         <div id="mySharesPagination" class="flex justify-center items-center gap-4 mt-2"></div>
                     </div>
                     
-                    <div id="adminContainer" class="hidden mt-6 flex-col gap-4">
+                    <div id="adminContainer" class="hidden flex-col gap-4">
                         <div id="subAdminManager" class="hidden bg-[#161b22] p-4 rounded-lg border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.05)] mb-2">
                             <h4 class="font-tactical text-xl text-purple-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-users-gear"></i> 子管理员白名单 (ROOT专属)</h4>
                             <div class="flex gap-4 mb-4">
                                 <input type="text" id="newSubAdminAccount" placeholder="输入新增管理员账户名..." class="bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white w-64 text-sm focus:border-purple-400 transition-all">
                                 <button id="addSubAdminBtn" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-purple-500/30 transition-colors"><i class="fa-solid fa-plus mr-1"></i> 授权管理员</button>
                             </div>
-                            <div class="flex flex-wrap gap-2" id="subAdminList"></div>
+                            <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto" id="subAdminList"></div>
                         </div>
                         <div class="flex justify-between items-center bg-[#161b22] p-4 rounded-lg border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)] flex-wrap gap-4">
                             <div class="flex items-center gap-4 shrink-0">
@@ -214,43 +221,44 @@
                                 </select>
                             </div>
                         </div>
-                        
+                        <div class="relative w-full max-w-md mb-2 mt-2">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="adminSearchInput" placeholder="ROOT管理全局检索 (支持名称/ID)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-red-400">
+                        </div>
                         <div id="adminGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"></div>
                         <div id="adminPagination" class="flex justify-center items-center gap-4 mt-2"></div>
                     </div>
                 </div>
 
-                <div id="publicHallContainer">
-                    <div class="flex items-center justify-between border-b border-white/10 pb-4 flex-wrap gap-4">
-                        <div class="flex items-center gap-4 shrink-0">
-                            <h3 class="font-tactical text-2xl text-blue-400 uppercase tracking-widest flex items-center gap-2">
-                                <i class="fa-solid fa-globe"></i> 全网大厅
-                            </h3>
-                            <button id="refreshSharedBtn" class="text-gray-500 hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-blue-400/10" title="获取最新共享词条">
-                                <i class="fa-solid fa-arrows-rotate"></i>
-                            </button>
+                <div id="publicHallContainer" class="mt-12 border-t border-white/10 pt-8">
+                    <div class="flex items-center gap-4 shrink-0 mb-6">
+                        <h3 class="font-tactical text-2xl text-blue-400 uppercase tracking-widest flex items-center gap-2">
+                            <i class="fa-solid fa-globe"></i> 全网大厅
+                        </h3>
+                        <button id="refreshSharedBtn" class="text-gray-500 hover:text-blue-400 transition-colors p-2 rounded-full hover:bg-blue-400/10" title="获取最新共享词条">
+                            <i class="fa-solid fa-arrows-rotate"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 flex-wrap mb-6">
+                        <div class="relative w-full max-w-lg">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
+                            <input type="text" id="sharedSearchInput" placeholder="检索全网共享词条或 ID (#001)..." class="bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all focus:border-blue-400">
                         </div>
-                        
-                        <div class="flex items-center gap-4 flex-grow justify-end shrink-0 pl-10">
-                            <div class="relative w-full max-w-lg">
-                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-lg"></i>
-                                <input type="text" id="sharedSearchInput" placeholder="检索全网共享词条或 ID (#001)..." class="shared-search-focus bg-[#0f1923] border border-white/10 text-lg pl-12 pr-4 py-2.5 rounded outline-none text-white w-full font-tactical tracking-wide shadow-inner transition-all">
-                            </div>
-                            <div class="flex items-center gap-2 bg-[#0f1923] border border-white/10 rounded px-4 py-2.5 shrink-0">
-                                <span class="text-gray-500 font-tactical tracking-widest text-base">SORT:</span>
-                                <select id="sortSelector" class="bg-transparent text-gray-300 text-base outline-none font-tactical cursor-pointer hover:text-white transition-colors">
-                                    <option value="time" class="text-black font-bold">🕒 最新发布</option>
-                                    <option value="favs" class="text-black font-bold">🔥 最热收藏</option>
-                                    <option value="usage" class="text-black font-bold">📋 最多复制</option>
-                                </select>
-                            </div>
+                        <div class="flex items-center gap-2 bg-[#0f1923] border border-white/10 rounded px-4 py-2.5 shrink-0">
+                            <span class="text-gray-500 font-tactical tracking-widest text-base">SORT:</span>
+                            <select id="sortSelector" class="bg-transparent text-gray-300 text-base outline-none font-tactical cursor-pointer hover:text-white transition-colors">
+                                <option value="time" class="text-black font-bold">🕒 最新发布</option>
+                                <option value="favs" class="text-black font-bold">🔥 最热收藏</option>
+                                <option value="usage" class="text-black font-bold">📋 最多复制</option>
+                            </select>
                         </div>
                     </div>
                     
                     <div id="cloudLoading" class="text-center text-gray-500 py-10 font-tactical text-xl hidden">
                         <i class="fa-solid fa-satellite-dish fa-beat-fade mb-3 text-2xl text-blue-400"></i><br>正在链接全网数据库...
                     </div>
-                    <div id="sharedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 mt-6 transition-opacity duration-300">
+                    <div id="sharedGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 transition-opacity duration-300">
                     </div>
                 </div>
             </div>
@@ -352,7 +360,7 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        // ================= 新增：数值格式化函数 (支持1K/1W/100W) =================
+        // 数值格式化函数
         function formatCount(numStr) {
             let n = parseInt(numStr || 0, 10);
             if (isNaN(n)) n = 0;
@@ -375,7 +383,6 @@
         let isRootAdmin = false;
         let isAdminLoggedIn = false;
         
-        // 全局用户对象
         let currentUser = null; 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -392,12 +399,12 @@
             const promptArea = document.getElementById('promptArea');
             const charCount = document.getElementById('charCount');
             const groupsContainer = document.getElementById('groupsContainer');
+            const favWrapper = document.getElementById('favWrapper');
             const mySharesContainer = document.getElementById('mySharesContainer');
             const adminContainer = document.getElementById('adminContainer');
             const sharedGrid = document.getElementById('sharedGrid');
             const cloudLoading = document.getElementById('cloudLoading');
             const syncStatusEl = document.getElementById('syncStatus');
-            const favSearchInput = document.getElementById('favSearchInput');
             const publicHallContainer = document.getElementById('publicHallContainer');
             
             const editModal = document.getElementById('editModal');
@@ -414,18 +421,18 @@
             const ITEMS_PER_PAGE = 12;
             const ADMIN_ITEMS_PER_PAGE = 10;
             
+            // 【重构】完全分离各搜索框的状态，防止交叉污染
             let currentPageFav = 1, currentPageShared = 1, currentPageMyShares = 1, currentPageAdmin = 1;
-            let favSearchQuery = '', sharedSearchQuery = '';
+            let favSearchQuery = '', mySharesSearchQuery = '', adminSearchQuery = '', sharedSearchQuery = '';
             let history = []; 
 
             let favoriteGroups = []; 
             let sharedItems = [];
 
-            // ================= 开启 Supabase 实时广播订阅大厅 =================
+            // 开启 Supabase 实时广播订阅大厅
             if (supabaseClient) {
                 supabaseClient.channel('realtime_shared_prompts')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, payload => {
-                        // 发现大厅数据变化时，静默拉取更新（不显示中间的 loading 遮罩）
                         fetchCloudData(false);
                     })
                     .subscribe();
@@ -482,7 +489,7 @@
                         sharedGrid.classList.remove('hidden');
                     }
                     renderSharedGrid();
-                    if (!groupsContainer.classList.contains('hidden')) renderGroups();
+                    if (!favWrapper.classList.contains('hidden')) renderGroups();
                     if(!mySharesContainer.classList.contains('hidden')) renderMyShares();
                     if(!adminContainer.classList.contains('hidden') && isAdminLoggedIn) renderAdminPanel();
                 }
@@ -519,13 +526,12 @@
                     await fetchUserFavorites(user);
                     await fetchCloudData();
                 } else {
-                    favoriteGroups = []; // 未登录彻底清空本地
+                    favoriteGroups = [];
                     renderGroups();
                     await fetchCloudData();
                 }
             }
 
-            // 检查本地存储中的登录态 (自定义系统)
             const localSession = localStorage.getItem('yaoai_user');
             if (localSession) { initApp(JSON.parse(localSession)); } else { initApp(null); }
 
@@ -535,7 +541,7 @@
                 
                 if (u) {
                     document.getElementById('loginText').textContent = escapeHTML(u.nickname);
-                    loginBtn.className = "cursor-default px-4 py-2 text-sm bg-green-600/20 border border-green-500/50 rounded text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.1)] shrink-0";
+                    loginBtn.className = "cursor-default px-5 py-2.5 text-sm bg-green-600/20 border border-green-500/50 rounded text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.1)] shrink-0";
                     logoutBtn.classList.remove('hidden');
 
                     if(supabaseClient) {
@@ -561,7 +567,7 @@
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`;
                 } else {
                     document.getElementById('loginText').textContent = "登录 / 注册";
-                    loginBtn.className = "cursor-pointer px-4 py-2 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold shrink-0";
+                    loginBtn.className = "cursor-pointer px-5 py-2.5 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold shrink-0";
                     logoutBtn.classList.add('hidden');
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-user-lock text-gray-500"></i> <span class="text-gray-500">未登录</span>`;
@@ -676,46 +682,52 @@
                 document.getElementById('tabAdmin').className = "hidden cursor-pointer font-tactical text-2xl text-gray-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-transparent pb-1 transition-all";
                 if(isAdminLoggedIn) document.getElementById('tabAdmin').classList.remove('hidden');
                 
-                groupsContainer.classList.add('hidden'); mySharesContainer.classList.add('hidden'); adminContainer.classList.add('hidden'); 
-                document.getElementById('addGroupBtn').classList.add('hidden'); publicHallContainer.classList.add('hidden');
+                favWrapper.classList.add('hidden'); 
+                mySharesContainer.classList.add('hidden'); 
+                adminContainer.classList.add('hidden'); 
+                publicHallContainer.classList.add('hidden');
             }
 
             document.getElementById('tabFavorites').onclick = () => {
                 resetTabs();
                 document.getElementById('tabFavorites').className = "cursor-pointer font-tactical text-2xl text-[#ffc107] uppercase tracking-widest flex items-center gap-2 border-b-2 border-[#ffc107] pb-1 transition-all";
-                groupsContainer.classList.remove('hidden'); if(currentUser) document.getElementById('addGroupBtn').classList.remove('hidden');
-                publicHallContainer.classList.remove('hidden'); favSearchInput.placeholder = '检索收藏夹档案...'; favSearchQuery = favSearchInput.value.toLowerCase(); currentPageFav = 1; renderGroups();
+                favWrapper.classList.remove('hidden'); 
+                publicHallContainer.classList.remove('hidden'); 
+                renderGroups();
             };
 
             document.getElementById('tabMyShares').onclick = () => {
                 resetTabs();
                 document.getElementById('tabMyShares').className = "cursor-pointer font-tactical text-2xl text-blue-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-blue-400 pb-1 transition-all";
                 mySharesContainer.classList.remove('hidden'); mySharesContainer.classList.add('flex');
-                favSearchInput.placeholder = '检索我的共享 (支持搜索名称/ID/内容)...'; favSearchQuery = favSearchInput.value.toLowerCase(); currentPageMyShares = 1; renderMyShares();
+                renderMyShares();
             };
 
             document.getElementById('tabAdmin').onclick = () => {
                 if(!isAdminLoggedIn) return; resetTabs();
                 document.getElementById('tabAdmin').className = "cursor-pointer font-tactical text-2xl text-red-400 uppercase tracking-widest flex items-center gap-2 border-b-2 border-red-400 pb-1 transition-all";
                 adminContainer.classList.remove('hidden'); adminContainer.classList.add('flex');
-                favSearchInput.placeholder = 'ROOT管理全局检索 (支持搜索名称/ID/内容)...'; favSearchQuery = favSearchInput.value.toLowerCase(); currentPageAdmin = 1; renderAdminPanel();
+                renderAdminPanel();
             };
 
             function renderGroups() {
                 if (!currentUser) {
                     groupsContainer.innerHTML = `
-                        <div class="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-white/10 border-dashed rounded-lg shadow-inner">
+                        <div class="flex flex-col items-center justify-center py-16 bg-[#161b22] border border-white/10 border-dashed rounded-lg shadow-inner mt-4">
                             <i class="fa-solid fa-cloud-bolt text-[#ffc107] text-5xl mb-4 drop-shadow-[0_0_15px_rgba(255,193,7,0.5)]"></i>
                             <h2 class="text-white font-tactical text-2xl tracking-widest mb-2">云端收藏夹未开启</h2>
                             <p class="text-gray-500 text-sm mb-6">所有的专属指令都将加密存储于你的云端账号数据库中。</p>
                             <button onclick="document.getElementById('authModal').classList.remove('hidden')" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-8 rounded shadow-[0_0_15px_rgba(59,130,246,0.3)] transition-colors">立即登录</button>
                         </div>
                     `;
-                    document.getElementById('addGroupBtn').classList.add('hidden');
+                    document.getElementById('favActionButtons').classList.add('hidden');
+                    document.getElementById('favSearchContainer').classList.add('hidden');
                     return;
                 }
                 
-                document.getElementById('addGroupBtn').classList.remove('hidden');
+                document.getElementById('favActionButtons').classList.remove('hidden');
+                document.getElementById('favSearchContainer').classList.remove('hidden');
+                
                 if (favoriteGroups.length === 0) return;
                 if (activeGroupIndex >= favoriteGroups.length) activeGroupIndex = 0;
                 
@@ -772,7 +784,7 @@
                                 <span>#${item.id}</span>
                                 <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(displayItem.authorName || '未知')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(displayItem.authorName || '未知')}</span>
                             </div>
-                            <div class="prompt-content group-hover:pr-[60px] transition-all">${escapeHTML(displayItem.name || '')}</div>
+                            <div class="prompt-content" title="${escapeHTML(displayItem.name || '')}">${escapeHTML((displayItem.name||'').length > 21 ? displayItem.name.substring(0,21) + '…' : displayItem.name || '')}</div>
                             <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${formatCount(displayItem.favs)}</span></div>
                             <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${formatCount(displayItem.usage)}</span></div>
                             <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
@@ -784,7 +796,7 @@
                 } else {
                     return `
                         <div class="prompt-item group hover:border-[#ffc107] relative" data-uid="${item._uid}" data-id="" data-name="${escapeHTML(item.name || '')}" data-text="${escapeHTML(item.text || '')}">
-                            <div class="prompt-content group-hover:pr-[110px] transition-all">${escapeHTML(item.name || '')}</div>
+                            <div class="prompt-content" title="${escapeHTML(item.name || '')}">${escapeHTML((item.name||'').length > 21 ? item.name.substring(0,21) + '…' : item.name || '')}</div>
                             <div class="absolute top-1.5 right-[10px] flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                                 <button class="publish-item-btn text-gray-400 hover:text-blue-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="一键发布到全网大厅"><i class="fa-solid fa-cloud-arrow-up pointer-events-none text-xs w-3 text-center"></i></button>
                                 <button class="copy-item-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容"><i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i></button>
@@ -803,8 +815,8 @@
                 new Sortable(zone, {
                     group: 'favorites', 
                     animation: 150, 
-                    delay: 50, // 【修复】：本地收藏夹 50ms 触发拖动
-                    delayOnTouchOnly: false, // 必须为 false 才能对鼠标左键生效
+                    delay: 50, 
+                    delayOnTouchOnly: false, 
                     ghostClass: 'sortable-ghost',
                     filter: '.empty-placeholder, .pagination-controls, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
                     onStart: (e) => { globalDraggedItem = e.item; },
@@ -813,10 +825,25 @@
                         const itemEl = evt.item;
                         const itemData = { _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: itemEl.dataset.id || '', name: itemEl.dataset.name, text: itemEl.dataset.text };
                         const targetG = favoriteGroups[activeGroupIndex];
-                        const isDuplicate = targetG.items.some(i => (itemData.id && i.id === itemData.id));
+                        const isDuplicate = targetG.items.some(i => 
+                            (itemData.id && i.id === itemData.id) || 
+                            (!itemData.id && i.text === itemData.text)
+                        );
                         setTimeout(() => {
                             itemEl.remove(); 
-                            if (!isDuplicate) { targetG.items.splice(evt.newIndex, 0, itemData); saveCloudAndSync(true); } else { renderGroups(); }
+                            if (!isDuplicate) { 
+                                targetG.items.splice(evt.newIndex, 0, itemData); 
+                                // 【新挂载】拖拽添加如果来自于大厅，同样 +1 云端收藏
+                                if (itemData.id && supabaseClient) {
+                                    const dbItem = sharedItems.find(i => i.id === itemData.id);
+                                    if (dbItem) {
+                                        dbItem.favs = (parseInt(dbItem.favs || 0) + 1).toString();
+                                        supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', itemData.id).then();
+                                    }
+                                }
+                                saveCloudAndSync(true); 
+                                if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
+                            } else { renderGroups(); }
                         }, 10);
                     },
                     onUpdate: () => {
@@ -852,7 +879,7 @@
                             <span>#${i.id}</span>
                             <span class="text-[10px] text-purple-300 ml-1.5 opacity-90 border-l border-cyan-500/30 pl-1.5 truncate max-w-[65px]" title="发布者: ${escapeHTML(i.authorName || '未知用户')}"><i class="fa-solid fa-user text-[8px] mr-0.5"></i>${escapeHTML(i.authorName || '未知用户')}</span>
                         </div>
-                        <div class="prompt-content group-hover:pr-[85px] transition-all">${escapeHTML(i.name)}</div>
+                        <div class="prompt-content" title="${escapeHTML(i.name)}">${escapeHTML((i.name||'').length > 21 ? i.name.substring(0,21) + '…' : i.name)}</div>
                         <div class="fav-action"><i class="fa-solid fa-star"></i><span class="fav-count-text">${formatCount(i.favs)}</span></div>
                         <div class="absolute bottom-1 left-2 text-[10px] text-gray-500 font-tactical pointer-events-none tracking-widest">USE: <span class="usage-count-text">${formatCount(i.usage)}</span></div>
                         <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-60 group-hover:opacity-100 transition-all z-10">
@@ -875,7 +902,7 @@
                     new Sortable(sharedGrid, { 
                         group: { name:'favorites', pull:'clone', put:false }, 
                         sort:false, 
-                        delay: 50, // 【修复】：全网大厅 50ms 触发拖动
+                        delay: 50,
                         delayOnTouchOnly: false,
                         filter: '.prev-page-shared, .next-page-shared, .copy-shared-btn',
                         onStart:(e) => { globalDraggedItem = e.item; }, 
@@ -891,7 +918,7 @@
                     document.getElementById('mySharesPagination').innerHTML = ''; return; 
                 }
                 let my = sharedItems.filter(i => i.authorId === currentUser.id);
-                if (favSearchQuery) my = my.filter(i => (i.name||'').toLowerCase().includes(favSearchQuery) || (i.id||'').toLowerCase().includes(favSearchQuery.replace('#','')) || (i.text||'').toLowerCase().includes(favSearchQuery));
+                if (mySharesSearchQuery) my = my.filter(i => (i.name||'').toLowerCase().includes(mySharesSearchQuery) || (i.id||'').toLowerCase().includes(mySharesSearchQuery.replace('#','')) || (i.text||'').toLowerCase().includes(mySharesSearchQuery));
                 const totalPages = Math.ceil(my.length / ADMIN_ITEMS_PER_PAGE) || 1;
                 if (currentPageMyShares > totalPages) currentPageMyShares = totalPages;
                 const slice = my.slice((currentPageMyShares - 1) * ADMIN_ITEMS_PER_PAGE, currentPageMyShares * ADMIN_ITEMS_PER_PAGE);
@@ -932,7 +959,7 @@
             function renderAdminPanel() {
                 if (!isAdminLoggedIn) return;
                 let items = [...sharedItems];
-                if (favSearchQuery) items = items.filter(i => (i.name||'').toLowerCase().includes(favSearchQuery) || (i.id && i.id.includes(favSearchQuery.replace('#',''))) || (i.text||'').toLowerCase().includes(favSearchQuery));
+                if (adminSearchQuery) items = items.filter(i => (i.name||'').toLowerCase().includes(adminSearchQuery) || (i.id && i.id.includes(adminSearchQuery.replace('#',''))) || (i.text||'').toLowerCase().includes(adminSearchQuery));
 
                 const sortBy = document.getElementById('adminSortSelector')?.value || 'time';
                 items.sort((a,b) => {
@@ -1004,7 +1031,18 @@
                     const idx = parseInt(tab.dataset.index);
                     const itemData = { _uid: 'uid_' + Math.random().toString(36).substr(2, 9), id: globalDraggedItem.dataset.id||'', name: globalDraggedItem.dataset.name, text: globalDraggedItem.dataset.text };
                     const isDuplicate = favoriteGroups[idx].items.some(i => (itemData.id && i.id === itemData.id));
-                    if (!isDuplicate) { favoriteGroups[idx].items.unshift(itemData); activeGroupIndex = idx; currentPageFav = 1; saveCloudAndSync(); }
+                    if (!isDuplicate) { 
+                        favoriteGroups[idx].items.unshift(itemData); 
+                        // 【新挂载】拖拽添加如果来自于大厅，同样 +1 云端收藏
+                        if (itemData.id && supabaseClient) {
+                            const dbItem = sharedItems.find(i => i.id === itemData.id);
+                            if (dbItem) {
+                                dbItem.favs = (parseInt(dbItem.favs || 0) + 1).toString();
+                                supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', itemData.id).then();
+                            }
+                        }
+                        activeGroupIndex = idx; currentPageFav = 1; saveCloudAndSync(); 
+                    }
                 }
                 document.querySelectorAll('.fav-tab').forEach(t => t.classList.remove('tab-drop-target'));
             });
@@ -1026,9 +1064,8 @@
             document.body.addEventListener('click', (e) => {
                 const t = e.target;
                 
-                // 【修复】：拦截置顶按钮和多选框点击，不弹出卡片编辑框
                 const adminCard = t.closest('.admin-card');
-                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn')) {
+                if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn') && !t.closest('.myshare-cb') && !t.closest('.admin-cb')) {
                     const id = adminCard.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
                         currentEditItemId = id; editModalId.textContent = `#${id}`; editModalName.value = item.name || ''; editModalText.value = item.text || ''; editModal.classList.remove('hidden');
@@ -1166,8 +1203,35 @@
                 if (t.closest('#addGroupBtn')) { favoriteGroups.push({ id: 'group_'+Date.now(), name: '新标签', items: [] }); activeGroupIndex = favoriteGroups.length - 1; saveCloudAndSync(); return; }
                 if (t.closest('.fav-tab') && !t.closest('.delete-group-btn') && !t.closest('.rename-btn')) { activeGroupIndex = parseInt(t.closest('.fav-tab').dataset.index); currentPageFav = 1; renderGroups(); return; }
                 if (t.closest('.delete-group-btn')) {
-                    const idx = parseInt(t.closest('.fav-tab').dataset.index); if (favoriteGroups[idx].id === 'group_default') return; 
-                    if (confirm('彻底删除此标签及词条？')) { favoriteGroups.splice(idx,1); saveCloudAndSync(); } return;
+                    const idx = parseInt(t.closest('.fav-tab').dataset.index);
+                    if (favoriteGroups[idx].id === 'group_default') return;
+                    if (confirm('彻底删除此标签及词条？')) {
+                        // 【修复】删除收藏夹时，同步减少组内所有云端词汇的 favs 计数
+                        const groupToDelete = favoriteGroups[idx];
+                        if (supabaseClient && groupToDelete.items && groupToDelete.items.length > 0) {
+                            groupToDelete.items.forEach(item => {
+                                if (item.id) {
+                                    const dbItem = sharedItems.find(si => si.id === item.id);
+                                    if (dbItem && parseInt(dbItem.favs || 0) > 0) {
+                                        dbItem.favs = (parseInt(dbItem.favs) - 1).toString();
+                                        supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', item.id).then();
+                                    }
+                                }
+                            });
+                        }
+                        favoriteGroups.splice(idx, 1);
+                        // 【修复】删除后修正 activeGroupIndex，防止越界或指向错误标签
+                        if (activeGroupIndex >= favoriteGroups.length) {
+                            activeGroupIndex = favoriteGroups.length - 1;
+                        } else if (idx < activeGroupIndex) {
+                            activeGroupIndex--;
+                        }
+                        if (activeGroupIndex < 0) activeGroupIndex = 0;
+                        currentPageFav = 1;
+                        saveCloudAndSync();
+                        if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
+                    }
+                    return;
                 }
                 if (t.closest('.rename-btn')) { const inp = t.closest('.fav-tab').querySelector('.group-name-input'); if(inp) { inp.readOnly = false; inp.focus(); } return; }
                 if (t.closest('.prev-page-fav')) { currentPageFav--; renderGroups(); return; }
@@ -1183,11 +1247,25 @@
                 if (t.closest('#adminSelectAllBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = true); return; }
                 if (t.closest('#adminInverseSelectBtn')) { document.querySelectorAll('.admin-cb').forEach(cb => cb.checked = !cb.checked); return; }
 
+                // 删除本地收藏夹卡片 (同步 -1 收藏量)
                 if (t.closest('.delete-item-btn')) {
-                    const uid = t.closest('.prompt-item').dataset.uid; favoriteGroups[activeGroupIndex].items = favoriteGroups[activeGroupIndex].items.filter(i => i._uid !== uid); saveCloudAndSync(); return;
+                    const itemEl = t.closest('.prompt-item');
+                    const uid = itemEl.dataset.uid; 
+                    const id = itemEl.dataset.id;
+                    favoriteGroups[activeGroupIndex].items = favoriteGroups[activeGroupIndex].items.filter(i => i._uid !== uid); 
+                    
+                    if (id && supabaseClient) {
+                        const dbItem = sharedItems.find(i => i.id === id);
+                        if (dbItem && parseInt(dbItem.favs || 0) > 0) {
+                            dbItem.favs = (parseInt(dbItem.favs) - 1).toString();
+                            supabaseClient.from('shared_prompts').update({ favs: dbItem.favs }).eq('id', id).then();
+                        }
+                    }
+                    saveCloudAndSync(); 
+                    if (!sharedGrid.classList.contains('hidden')) renderSharedGrid();
+                    return;
                 }
 
-                // 【修复】：点击置顶正常生效
                 if (t.closest('.pin-admin-btn')) {
                     if (!supabaseClient) return; const tr = t.closest('.admin-card'); const id = tr.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
@@ -1213,13 +1291,41 @@
                 if (t.closest('#adminBatchDelete') && supabaseClient) {
                     const cbs = document.querySelectorAll('.admin-cb:checked'); if(cbs.length === 0) return;
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
-                    if(confirm(`删除 ${ids.length} 个词汇？`)) { supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData()); } return;
+                    if(confirm(`删除 ${ids.length} 个词汇？`)) {
+                        supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => {
+                            // 【修复】同步从所有本地收藏夹中移除已删除的云端词汇
+                            const idSet = new Set(ids);
+                            let changed = false;
+                            favoriteGroups.forEach(g => {
+                                const before = g.items.length;
+                                g.items = g.items.filter(i => !i.id || !idSet.has(i.id));
+                                if (g.items.length !== before) changed = true;
+                            });
+                            if (changed) saveCloudAndSync(true);
+                            fetchCloudData();
+                        });
+                    }
+                    return;
                 }
                 
                 if (t.closest('#myBatchDelete') && supabaseClient) {
                     const cbs = document.querySelectorAll('.myshare-cb:checked'); if(cbs.length === 0) return;
                     const ids = Array.from(cbs).map(cb => cb.closest('.admin-card').dataset.id);
-                    if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) { supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => fetchCloudData()); } return;
+                    if(confirm(`确定要彻底删除选中的 ${ids.length} 个属于你的共享词汇吗？`)) {
+                        supabaseClient.from('shared_prompts').delete().in('id', ids).then(() => {
+                            // 【修复】同步从所有本地收藏夹中移除已删除的云端词汇
+                            const idSet = new Set(ids);
+                            let changed = false;
+                            favoriteGroups.forEach(g => {
+                                const before = g.items.length;
+                                g.items = g.items.filter(i => !i.id || !idSet.has(i.id));
+                                if (g.items.length !== before) changed = true;
+                            });
+                            if (changed) saveCloudAndSync(true);
+                            fetchCloudData();
+                        });
+                    }
+                    return;
                 }
 
                 if (t.closest('.fav-action')) {
@@ -1281,12 +1387,16 @@
                 }
             }, true);
             
+            // 分离绑定的各大版块搜索监听器
             const fSearch = document.getElementById('favSearchInput');
-            if(fSearch) fSearch.oninput = (e) => { 
-                favSearchQuery = e.target.value.toLowerCase(); currentPageFav=1; currentPageMyShares=1; currentPageAdmin=1;
-                renderGroups(); if(!mySharesContainer.classList.contains('hidden')) renderMyShares();
-                if(isAdminLoggedIn && !adminContainer.classList.contains('hidden')) renderAdminPanel();
-            };
+            if(fSearch) fSearch.oninput = (e) => { favSearchQuery = e.target.value.toLowerCase(); currentPageFav=1; renderGroups(); };
+            
+            const mSearch = document.getElementById('mySharesSearchInput');
+            if(mSearch) mSearch.oninput = (e) => { mySharesSearchQuery = e.target.value.toLowerCase(); currentPageMyShares=1; renderMyShares(); };
+            
+            const aSearch = document.getElementById('adminSearchInput');
+            if(aSearch) aSearch.oninput = (e) => { adminSearchQuery = e.target.value.toLowerCase(); currentPageAdmin=1; renderAdminPanel(); };
+
             const sSearch = document.getElementById('sharedSearchInput');
             if(sSearch) sSearch.oninput = (e) => { sharedSearchQuery = e.target.value.toLowerCase(); currentPageShared=1; renderSharedGrid(); };
             
