@@ -191,7 +191,7 @@
                         <div id="subAdminManager" class="hidden bg-[#161b22] p-4 rounded-lg border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.05)] mb-2">
                             <h4 class="font-tactical text-xl text-purple-400 mb-3 flex items-center gap-2"><i class="fa-solid fa-users-gear"></i> 子管理员白名单 (ROOT专属)</h4>
                             <div class="flex gap-4 mb-4">
-                                <input type="text" id="newSubAdminEmail" placeholder="输入新增管理员账户名..." class="bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white w-64 text-sm focus:border-purple-400 transition-all">
+                                <input type="text" id="newSubAdminAccount" placeholder="输入新增管理员账户名..." class="bg-[#0f1923] border border-white/10 px-3 py-2 rounded outline-none text-white w-64 text-sm focus:border-purple-400 transition-all">
                                 <button id="addSubAdminBtn" class="bg-purple-500/10 text-purple-400 border border-purple-500/30 px-4 py-2 rounded text-sm font-bold hover:bg-purple-500/30 transition-colors"><i class="fa-solid fa-plus mr-1"></i> 授权管理员</button>
                             </div>
                             <div class="flex flex-wrap gap-2" id="subAdminList"></div>
@@ -367,8 +367,8 @@
             if (window.supabase) supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         } catch(e) { console.error("Supabase 初始化失败"); }
 
-        // Root Admin 账户名 (修改为你自己注册的管理员账户名)
-        const ROOT_ADMIN = 'admin'; 
+        // Root Admin 账户名
+        const ROOT_ADMIN = '893107072@qq.com'; 
         let subAdmins = [];
         let isRootAdmin = false;
         let isAdminLoggedIn = false;
@@ -433,6 +433,36 @@
                     const { data, error } = await supabaseClient.from('shared_prompts').select('*').order('time', { ascending: false });
                     if (error) throw error;
                     sharedItems = data || [];
+
+                    // ================= 底层数据实时深层同步 =================
+                    let needsSave = false;
+                    if (favoriteGroups && favoriteGroups.length > 0) {
+                        favoriteGroups.forEach(group => {
+                            group.items.forEach(item => {
+                                if (item.id) {
+                                    // 在云端寻找对应ID的共享词条
+                                    const cloudItem = sharedItems.find(i => i.id === item.id);
+                                    if (cloudItem) {
+                                        // 如果云端的内容或名称被修改了，自动强制覆盖本地存储的数据
+                                        if (item.name !== cloudItem.name || item.text !== cloudItem.text) {
+                                            item.name = cloudItem.name;
+                                            item.text = cloudItem.text;
+                                            needsSave = true;
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                    }
+                    // 如果发生了底层数据覆盖，静默保存一次至用户的云端收藏数据库
+                    if (needsSave && currentUser) {
+                        supabaseClient.from('user_favorites').upsert({
+                            user_id: currentUser.id,
+                            fav_data: JSON.stringify(favoriteGroups)
+                        }, { onConflict: 'user_id' });
+                    }
+                    // ==========================================================
+
                 } catch (err) {
                     console.error("数据拉取失败:", err);
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-red-400"></i> <span class="text-red-400">大厅数据异常</span>`;
@@ -504,8 +534,9 @@
 
                     if(supabaseClient) {
                         try {
-                            const { data } = await supabaseClient.from('admin_whitelist').select('email');
-                            subAdmins = data ? data.map(i => i.email) : [];
+                            // 改为查询 account_name
+                            const { data } = await supabaseClient.from('admin_whitelist').select('account_name');
+                            subAdmins = data ? data.map(i => i.account_name) : [];
                         } catch(e) { console.error("获取白名单失败", e); }
                     }
                     isRootAdmin = (u.account_name === ROOT_ADMIN);
@@ -551,7 +582,7 @@
                 } catch(e) { console.error("云端保存失败", e); }
             }
 
-            // === 认证系统逻辑 (取代 Netlify) ===
+            // === 认证系统逻辑 ===
             const authModal = document.getElementById('authModal');
             const authTabs = document.querySelectorAll('.auth-tab');
             const authPanels = document.querySelectorAll('.auth-panel');
@@ -629,14 +660,12 @@
 
                 showAuthLoading('正在注册并分配权限...');
                 try {
-                    // 检查重复
                     const { data: existAcc } = await supabaseClient.from('app_users').select('id').eq('account_name', acc);
                     if(existAcc && existAcc.length > 0) throw new Error("该账户名已被注册");
                     
                     const { data: existNick } = await supabaseClient.from('app_users').select('id').eq('nickname', nick);
                     if(existNick && existNick.length > 0) throw new Error("该昵称已被使用");
 
-                    // 插入 (Supabase如果设置了UUID自动生成，可以不传id)
                     const { data, error } = await supabaseClient.from('app_users').insert([{
                         account_name: acc, nickname: nick, pwd: pwd, recovery_code: rec
                     }]).select().single();
@@ -664,7 +693,6 @@
 
                 showAuthLoading('验证安全口令中...');
                 try {
-                    // 检查匹配找回码 或 旧密码
                     const { data, error } = await supabaseClient.from('app_users').select('*').eq('account_name', acc).single();
                     if(error || !data) throw new Error("未找到该账户");
 
@@ -672,7 +700,6 @@
                         throw new Error("找回码或旧密码错误");
                     }
 
-                    // 修改密码
                     const { error: updError } = await supabaseClient.from('app_users').update({ pwd: newPwd }).eq('id', data.id);
                     if(updError) throw updError;
 
@@ -783,6 +810,7 @@
                 }
 
                 if (hasId) {
+                    // 云端共享大厅词汇模板 (去除修改按钮，增加云端同步)
                     return `
                         <div class="prompt-item group hover:border-[#ffc107] relative is-fav" data-uid="${item._uid}" data-id="${item.id}" data-name="${escapeHTML(displayItem.name || '')}" data-text="${escapeHTML(displayItem.text || '')}">
                             
@@ -802,7 +830,7 @@
                             </div>
                             
                             <div class="absolute top-1.5 right-[75px] flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
-                                <button class="copy-item-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容">
+                                <button class="copy-shared-btn text-gray-400 hover:text-green-400 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="复制指令内容">
                                     <i class="fa-solid fa-copy pointer-events-none text-xs w-3 text-center"></i>
                                 </button>
                                 <button class="delete-item-btn text-gray-400 hover:text-red-500 bg-black/60 hover:bg-black p-1.5 rounded transition-colors" title="无感移除该词条">
@@ -999,10 +1027,10 @@
             function renderSubAdmins() {
                 const list = document.getElementById('subAdminList');
                 if(!list) return;
-                list.innerHTML = subAdmins.map(email => `
+                list.innerHTML = subAdmins.map(acc => `
                     <div class="flex items-center gap-2 bg-purple-500/20 border border-purple-500/30 text-purple-200 px-3 py-1.5 rounded-full text-sm">
-                        <i class="fa-solid fa-user-shield"></i> ${email}
-                        <button class="delete-subadmin-btn text-purple-400 hover:text-red-400 ml-1 transition-colors" data-email="${email}">
+                        <i class="fa-solid fa-user-shield"></i> ${acc}
+                        <button class="delete-subadmin-btn text-purple-400 hover:text-red-400 ml-1 transition-colors" data-account="${acc}">
                             <i class="fa-solid fa-xmark pointer-events-none"></i>
                         </button>
                     </div>
@@ -1291,6 +1319,7 @@
                     return;
                 }
 
+                // 复制指令：如果是共享词条（含ID），则同时增加云端 usage 使用量
                 if (t.closest('.copy-item-btn') || t.closest('.copy-shared-btn')) {
                     e.stopPropagation();
                     const btn = t.closest('button');
@@ -1448,19 +1477,31 @@
                     return;
                 }
                 
+                // 添加子管理员
                 if (t.closest('#addSubAdminBtn') && supabaseClient) {
-                    const em = document.getElementById('newSubAdminEmail').value.trim();
-                    if (!em || em === ROOT_ADMIN || subAdmins.includes(em)) return;
-                    supabaseClient.from('admin_whitelist').insert([{ email: em }]).then(({error}) => {
-                        if(!error) { subAdmins.push(em); document.getElementById('newSubAdminEmail').value = ''; renderSubAdmins(); alert('添加成功'); }
+                    const acc = document.getElementById('newSubAdminAccount').value.trim();
+                    if (!acc || acc === ROOT_ADMIN || subAdmins.includes(acc)) return;
+                    supabaseClient.from('admin_whitelist').insert([{ account_name: acc }]).then(({error}) => {
+                        if(!error) { 
+                            subAdmins.push(acc); 
+                            document.getElementById('newSubAdminAccount').value = ''; 
+                            renderSubAdmins(); 
+                            alert('管理员添加成功'); 
+                        } else {
+                            alert('添加失败: ' + error.message);
+                        }
                     }); return;
                 }
                 
+                // 移除子管理员
                 if (t.closest('.delete-subadmin-btn') && supabaseClient) {
-                    const em = t.closest('.delete-subadmin-btn').dataset.email;
-                    if(confirm(`移除 ${em}?`)) {
-                        supabaseClient.from('admin_whitelist').delete().eq('email', em).then(({error}) => {
-                            if(!error) { subAdmins = subAdmins.filter(e => e !== em); renderSubAdmins(); }
+                    const acc = t.closest('.delete-subadmin-btn').dataset.account;
+                    if(confirm(`确定要移除管理员身份: ${acc}?`)) {
+                        supabaseClient.from('admin_whitelist').delete().eq('account_name', acc).then(({error}) => {
+                            if(!error) { 
+                                subAdmins = subAdmins.filter(e => e !== acc); 
+                                renderSubAdmins(); 
+                            }
                         });
                     } return;
                 }
@@ -1507,12 +1548,25 @@
                     } return;
                 }
 
+                // 注入词汇到终端
                 if (t.closest('.prompt-item') && !t.closest('.fav-action') && !t.closest('button') && !t.closest('input')) {
                     const item = t.closest('.prompt-item');
                     history.push(promptArea.value);
                     promptArea.value += (promptArea.value && !promptArea.value.endsWith('\n') ? '\n' : '') + item.dataset.text;
                     const max = 50000;
                     document.getElementById('charCount').textContent = `剩余 ${max - promptArea.value.length} 字`;
+
+                    // 【新增】：如果该词汇拥有ID(属于云端共享池)，将其注入终端视为一次"使用"，并实时同步至云端
+                    if (item.dataset.id && supabaseClient) {
+                        const id = item.dataset.id;
+                        const dbItem = sharedItems.find(i => i.id === id);
+                        if (dbItem) {
+                            dbItem.usage = (parseInt(dbItem.usage || 0) + 1).toString();
+                            const uEl = item.querySelector('.usage-count-text');
+                            if (uEl) uEl.textContent = dbItem.usage;
+                            supabaseClient.from('shared_prompts').update({ usage: dbItem.usage }).eq('id', id);
+                        }
+                    }
                 }
             });
 
@@ -1543,4 +1597,3 @@
     </script>
 </body>
 </html>
-
