@@ -76,7 +76,6 @@
         ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
         ::-webkit-scrollbar-track { background: #0f1923; }
         
-        /* Auth Input Styles */
         .auth-input { width: 100%; background: #0f1923; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; padding: 10px 14px; color: white; outline: none; transition: border-color 0.2s; }
         .auth-input:focus { border-color: #3b82f6; }
         .auth-label { display: block; text-transform: uppercase; font-family: 'Teko', sans-serif; letter-spacing: 0.05em; color: #9ca3af; font-size: 0.875rem; margin-bottom: 4px; }
@@ -353,7 +352,7 @@
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
 
-        // ================= 新增：数值格式化函数 =================
+        // ================= 新增：数值格式化函数 (支持1K/1W/100W) =================
         function formatCount(numStr) {
             let n = parseInt(numStr || 0, 10);
             if (isNaN(n)) n = 0;
@@ -376,6 +375,7 @@
         let isRootAdmin = false;
         let isAdminLoggedIn = false;
         
+        // 全局用户对象
         let currentUser = null; 
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -421,7 +421,7 @@
             let favoriteGroups = []; 
             let sharedItems = [];
 
-            // ================= 新增：开启 Supabase 实时广播订阅大厅 =================
+            // ================= 开启 Supabase 实时广播订阅大厅 =================
             if (supabaseClient) {
                 supabaseClient.channel('realtime_shared_prompts')
                     .on('postgres_changes', { event: '*', schema: 'public', table: 'shared_prompts' }, payload => {
@@ -437,7 +437,6 @@
                 charCount.textContent = `剩余 ${remaining} 字`;
             });
 
-            // 加入 showLoading 参数，支持实时热更新静默加载
             async function fetchCloudData(showLoading = true) {
                 if (!supabaseClient) return;
                 if (showLoading) {
@@ -520,12 +519,13 @@
                     await fetchUserFavorites(user);
                     await fetchCloudData();
                 } else {
-                    favoriteGroups = [];
+                    favoriteGroups = []; // 未登录彻底清空本地
                     renderGroups();
                     await fetchCloudData();
                 }
             }
 
+            // 检查本地存储中的登录态 (自定义系统)
             const localSession = localStorage.getItem('yaoai_user');
             if (localSession) { initApp(JSON.parse(localSession)); } else { initApp(null); }
 
@@ -535,7 +535,7 @@
                 
                 if (u) {
                     document.getElementById('loginText').textContent = escapeHTML(u.nickname);
-                    loginBtn.className = "cursor-default px-4 py-2 text-sm bg-green-600/20 border border-green-500/50 rounded text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.1)]";
+                    loginBtn.className = "cursor-default px-4 py-2 text-sm bg-green-600/20 border border-green-500/50 rounded text-green-400 font-bold shadow-[0_0_10px_rgba(34,197,94,0.1)] shrink-0";
                     logoutBtn.classList.remove('hidden');
 
                     if(supabaseClient) {
@@ -561,7 +561,7 @@
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-cloud text-blue-400"></i> <span class="text-blue-400">已登录</span>`;
                 } else {
                     document.getElementById('loginText').textContent = "登录 / 注册";
-                    loginBtn.className = "cursor-pointer px-4 py-2 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold";
+                    loginBtn.className = "cursor-pointer px-4 py-2 text-sm bg-blue-600/20 border border-blue-500/50 rounded text-blue-300 hover:bg-blue-600/40 transition-all font-bold shrink-0";
                     logoutBtn.classList.add('hidden');
                     
                     syncStatusEl.innerHTML = `<i class="fa-solid fa-user-lock text-gray-500"></i> <span class="text-gray-500">未登录</span>`;
@@ -803,8 +803,8 @@
                 new Sortable(zone, {
                     group: 'favorites', 
                     animation: 150, 
-                    delay: 50, 
-                    delayOnTouchOnly: false, 
+                    delay: 50, // 【修复】：本地收藏夹 50ms 触发拖动
+                    delayOnTouchOnly: false, // 必须为 false 才能对鼠标左键生效
                     ghostClass: 'sortable-ghost',
                     filter: '.empty-placeholder, .pagination-controls, .delete-item-btn, .edit-item-btn, .copy-item-btn, .publish-item-btn',
                     onStart: (e) => { globalDraggedItem = e.item; },
@@ -875,7 +875,7 @@
                     new Sortable(sharedGrid, { 
                         group: { name:'favorites', pull:'clone', put:false }, 
                         sort:false, 
-                        delay: 50,
+                        delay: 50, // 【修复】：全网大厅 50ms 触发拖动
                         delayOnTouchOnly: false,
                         filter: '.prev-page-shared, .next-page-shared, .copy-shared-btn',
                         onStart:(e) => { globalDraggedItem = e.item; }, 
@@ -898,7 +898,7 @@
 
                 document.getElementById('mySharesGrid').innerHTML = slice.map(i => `
                     <div class="prompt-item group relative flex flex-col items-start admin-card border-blue-500/30 hover:border-blue-400" data-id="${i.id}">
-                        <div class="absolute top-2.5 right-3 z-10" onclick="event.stopPropagation()"><input type="checkbox" class="myshare-cb accent-blue-500 w-4 h-4 cursor-pointer shadow-lg shadow-black"></div>
+                        <div class="absolute top-2.5 right-3 z-10"><input type="checkbox" class="myshare-cb accent-blue-500 w-4 h-4 cursor-pointer shadow-lg shadow-black"></div>
                         <div class="w-full bg-[#0f1923] px-3 py-2 border-b border-white/10 flex justify-between items-center shrink-0">
                             <span class="font-mono text-cyan-400 text-sm tracking-widest">#${i.id}</span>
                             <span class="text-[10px] text-gray-500 mr-7 flex gap-3"><span title="收藏"><i class="fa-solid fa-star text-[#ffc107]"></i> ${formatCount(i.favs)}</span><span title="复制"><i class="fa-solid fa-copy text-blue-400"></i> ${formatCount(i.usage)}</span></span>
@@ -951,7 +951,7 @@
 
                 document.getElementById('adminGrid').innerHTML = slice.map(i => `
                     <div class="prompt-item group relative flex flex-col items-start admin-card admin-card-root ${i.is_pinned ? 'border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : ''}" data-id="${i.id}">
-                        <div class="absolute top-9 right-3 z-10 flex flex-col gap-2 items-center" onclick="event.stopPropagation()">
+                        <div class="absolute top-9 right-3 z-10 flex flex-col gap-2 items-center">
                             <input type="checkbox" class="admin-cb accent-red-500 w-4 h-4 cursor-pointer shadow-lg shadow-black">
                             <button class="pin-admin-btn text-${i.is_pinned ? 'yellow-400' : 'gray-600'} hover:text-yellow-300 transition-colors outline-none bg-black/60 rounded-full w-5 h-5 flex items-center justify-center border border-white/5 shadow-md" title="全网置顶"><i class="fa-solid fa-thumbtack text-[10px] pointer-events-none"></i></button>
                         </div>
@@ -1026,7 +1026,7 @@
             document.body.addEventListener('click', (e) => {
                 const t = e.target;
                 
-                // 【修复】：取消阻止事件冒泡引起的置顶失效
+                // 【修复】：拦截置顶按钮和多选框点击，不弹出卡片编辑框
                 const adminCard = t.closest('.admin-card');
                 if (adminCard && !t.closest('input') && !t.closest('button') && !t.closest('.pin-admin-btn')) {
                     const id = adminCard.dataset.id; const item = sharedItems.find(i => i.id === id);
@@ -1187,7 +1187,7 @@
                     const uid = t.closest('.prompt-item').dataset.uid; favoriteGroups[activeGroupIndex].items = favoriteGroups[activeGroupIndex].items.filter(i => i._uid !== uid); saveCloudAndSync(); return;
                 }
 
-                // 【修复】：点击置顶恢复生效
+                // 【修复】：点击置顶正常生效
                 if (t.closest('.pin-admin-btn')) {
                     if (!supabaseClient) return; const tr = t.closest('.admin-card'); const id = tr.dataset.id; const item = sharedItems.find(i => i.id === id);
                     if (item) {
